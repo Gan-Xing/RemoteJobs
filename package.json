@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "npx playwright install --with-deps"
+    "postinstall": "npx playwright install"
   },
   "dependencies": {
     "next": "^13.4.19",
