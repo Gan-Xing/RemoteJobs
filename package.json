@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "npx playwright install --with-deps"
   },
   "dependencies": {
     "next": "^13.4.19",
@@ -21,5 +22,8 @@
     "eslint-config-next": "^13.4.19",
     "postcss": "^8.4.28",
     "tailwindcss": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 } 
