@@ -15,30 +15,7 @@
 - **前端**: React, Next.js, Tailwind CSS
 - **后端**: Next.js API Routes
 - **网络爬虫**: Playwright
-- **部署**: 推荐使用 Railway
-
-## 🚀 部署方式说明
-
-由于本项目使用了 Playwright（需要完整浏览器运行环境），**无法部署在 Vercel**（Vercel 不支持 Chromium 启动）。
-
-推荐使用 [Railway](https://railway.app/) 进行部署。部署步骤如下：
-
-### 🔧 Railway 部署步骤
-
-1. 前往 https://railway.app 新建项目。
-2. 点击 “Deploy from GitHub repository”，选择本项目代码库。
-3. 在弹出的部署设置中，添加如下环境变量（可选）：
-    - `PORT`: `3000`
-4. Railway 会自动识别 `package.json` 中的 `start` 命令并进行部署。
-5. 如果你使用 `playwright`，确保在 `package.json` 的 `postinstall` 脚本中添加：
-   ```json
-   "scripts": {
-     "postinstall": "npx playwright install --with-deps"
-   }
-   ```
-6. 部署完成后，复制分配的 URL 即可对外访问 API。
-
-> 📝 注意：如需长期稳定运行，建议开启 Railway 的“Deploy from GitHub”自动构建选项，并将爬虫 API 与前端项目分离部署。
+- **部署**: 推荐使用 Render
 
 ## 开始使用
 

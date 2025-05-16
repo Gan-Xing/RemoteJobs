@@ -1,0 +1,13 @@
+ services:
+  - type: web
+    name: RemoteJobs
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm install && npx playwright install --with-deps && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: PORT
+        value: 3000
