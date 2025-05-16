@@ -4,7 +4,7 @@
     runtime: node
     plan: free
     branch: main
-    buildCommand: npm install && npx playwright install --with-deps && npm run build
+    buildCommand: npm install && npx playwright install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
