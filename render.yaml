@@ -1,13 +1,12 @@
- services:
+services:
   - type: web
     name: RemoteJobs
-    runtime: node
+    runtime: docker
     plan: free
     branch: main
-    buildCommand: npm install && npx playwright install && npm run build
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: NODE_VERSION
-        value: 18
       - key: PORT
         value: 3000
+      - key: NODE_ENV
+        value: production
