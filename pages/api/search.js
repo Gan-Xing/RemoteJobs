@@ -251,26 +251,7 @@ async function scrapeLinkedinJobs(page, keywords, location, maxJobs = 20, fetchD
         const postedEl = await card.$("time.job-search-card__listdate");
         let linkEl = await card.$("a.base-card__full-link");
 
-        let rawJobId = null;
-        try {
-          const parentLi = await card.evaluateHandle((node) => {
-            let parent = node;
-            while (parent && parent.tagName !== 'LI') {
-              parent = parent.parentElement;
-            }
-            return parent;
-          });
-          
-          if (parentLi) {
-            const isNotNull = await parentLi.evaluate(node => node !== null);
-            if (isNotNull) {
-              rawJobId = await parentLi.getAttribute("data-entity-urn");
-            }
-          }
-          await parentLi.dispose();
-        } catch (e) {
-          logger.warning(`查找职位ID的父'li'元素时出错: ${e.message}`);
-        }
+        let rawJobId = await card.getAttribute("data-entity-urn");
         
         const jobId = rawJobId ? rawJobId.split(":").pop() : `generated_id_${Date.now()}_${cardIndex}`;
 
