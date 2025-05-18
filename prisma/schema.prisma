@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+   datasource db {
+     provider  = "postgresql"
+     url       = env("DATABASE_URL")
+     directUrl = env("DIRECT_URL")
+   }
+
+model Job {
+  id                    String   @id @default(uuid())
+  jobId                 String   @unique  // LinkedIn 的职位ID (job_id)
+  title                 String   // 职位标题
+  company               String   // 公司名称
+  location              String?  // 地点
+  description           String?  @db.Text  // 职位描述 (job_description)
+  url                   String   @unique  // 职位链接 (link)
+  salary                String?  // 薪资范围 (salary_range)
+  postedAt              DateTime?  // 发布日期 (posted_date_attr)
+  postedText            String?  // 发布日期文本 (posted_text)
+  applicantsCount       String?  // 申请人数 (applicants_count)
+  
+  // 职位标准信息 - 拆分为单独的字段，从job_criteria提取
+  seniority             String?  // 职位级别
+  employmentType        String?  // 雇佣类型
+  jobFunction           String?  // 工作职能
+  industries            String?  // 行业
+  
+  // 远程工作标志
+  isRemote              Boolean  @default(true)  // 是否远程工作
+  
+  descriptionFallback   String?  @db.Text  // 备选描述 (job_description_fallback)
+  
+  // 系统字段
+  createdAt             DateTime @default(now())  // 记录创建时间
+  updatedAt             DateTime @updatedAt  // 记录更新时间
+  searchCount           Int      @default(1)  // 搜索次数
+  lastSearchedAt        DateTime @default(now())  // 最后被搜索的时间
+}

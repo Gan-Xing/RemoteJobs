@@ -1,15 +1,27 @@
 export default function JobDetail({ job, onClose }) {
   if (!job) return null;
 
+  // 防止滚动传播和背景滚动
+  const stopPropagation = (e) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+      onClick={onClose}
+      style={{ backdropFilter: 'blur(2px)' }}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col relative"
+        onClick={stopPropagation}
+      >
         {/* 头部 */}
-        <div className="bg-indigo-600 text-white p-4 flex justify-between items-center">
-          <h2 className="text-xl font-semibold">{job.title}</h2>
+        <div className="bg-indigo-600 text-white p-4 flex justify-between items-center sticky top-0 z-10">
+          <h2 className="text-xl font-semibold truncate pr-8">{job.title}</h2>
           <button
             onClick={onClose}
-            className="text-white hover:text-gray-200 focus:outline-none"
+            className="text-white hover:text-gray-200 focus:outline-none absolute right-4 top-4"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -49,7 +61,7 @@ export default function JobDetail({ job, onClose }) {
           {job.job_criteria && Object.keys(job.job_criteria).length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-2">职位要求</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Object.entries(job.job_criteria).map(([key, value]) => (
                   <div key={key} className="bg-gray-50 p-3 rounded-md">
                     <div className="text-sm text-gray-500">{key}</div>
@@ -82,7 +94,7 @@ export default function JobDetail({ job, onClose }) {
           
           {/* 申请链接 */}
           {job.link && job.link !== "N/A" && (
-            <div className="mt-8">
+            <div className="mt-8 bg-white pt-4 pb-2">
               <a
                 href={job.link}
                 target="_blank"

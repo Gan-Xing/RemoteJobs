@@ -9,9 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "@supabase/supabase-js": "^2.49.4",
     "next": "^13.4.19",
+    "node-fetch": "^2.7.0",
     "playwright": "^1.40.1",
     "playwright-core": "^1.40.1",
+    "prisma": "^6.8.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -25,4 +29,4 @@
   "engines": {
     "node": ">=16.0.0"
   }
-} 
+}

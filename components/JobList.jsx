@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import JobDetail from './JobDetail';
 
-export default function JobList({ jobs }) {
-  const [selectedJob, setSelectedJob] = useState(null);
-  
+export default function JobList({ jobs, onJobClick }) {
   if (!jobs || jobs.length === 0) {
     return (
       <div className="text-center py-10 text-gray-500">
@@ -11,14 +9,6 @@ export default function JobList({ jobs }) {
       </div>
     );
   }
-
-  const openJobDetail = (job) => {
-    setSelectedJob(job);
-  };
-
-  const closeJobDetail = () => {
-    setSelectedJob(null);
-  };
 
   const formatSalary = (salary) => {
     if (!salary || salary === "未找到") return "薪资未公布";
@@ -32,7 +22,7 @@ export default function JobList({ jobs }) {
           <div 
             key={job.job_id} 
             className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => openJobDetail(job)}
+            onClick={() => onJobClick(job)}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -91,10 +81,6 @@ export default function JobList({ jobs }) {
           </div>
         ))}
       </div>
-      
-      {selectedJob && (
-        <JobDetail job={selectedJob} onClose={closeJobDetail} />
-      )}
     </div>
   );
 } 
