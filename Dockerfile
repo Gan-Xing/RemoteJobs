@@ -18,17 +18,26 @@ RUN npm install -g playwright && npx playwright install --with-deps
 # 设置工作目录
 WORKDIR /app
 
-# 拷贝项目文件
+# 首先只复制 package.json 和 pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml ./
+
+# 安装 pnpm
+RUN npm install -g pnpm
+
+# 复制所有项目文件
 COPY . .
 
 # 安装项目依赖
-RUN npm install
+RUN pnpm install
+
+# 生成 Prisma Client
+RUN npx prisma generate
 
 # 构建 Next.js 项目
-RUN npm run build
+RUN pnpm run build
 
 # 开放端口
 EXPOSE 3000
 
 # 启动服务
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]
