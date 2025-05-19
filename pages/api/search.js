@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 import path from 'path';
 import { generateSearchId, saveSearch, saveJobs } from '../../utils/prisma';
+import { convertSalaryToUSD } from '../../utils/salaryConverter';
 
 // 设置临时文件存储位置
 const TEMP_DATA_PATH = path.join(process.cwd(), 'temp');
@@ -119,9 +120,9 @@ async function getLinkedinJobs(page, keywords, location, maxJobs = 20, fetchDeta
           if (consecutiveEmptyPages >= 2) {
             logger.info(`连续${consecutiveEmptyPages}个页面为空，可能已到达职位列表末尾，停止搜索`);
             hasMorePages = false;
-            break;
-          }
-          
+        break;
+      }
+
           // 否则继续尝试下一页
           currentPage++;
           start += 25;
@@ -150,13 +151,20 @@ async function getLinkedinJobs(page, keywords, location, maxJobs = 20, fetchDeta
           
           // 提取jobId
           const jobId = entityUrn.split(":").pop();
-          
+
+          // 提取用户访问的职位页面URL
+          const detailLinkEl = await card.$("a.base-card__full-link");
+          const userLink = detailLinkEl ? await detailLinkEl.getAttribute("href") : null;
+
+          // 构建API URL用于获取数据
+          const detailUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}${refId ? `?refId=${encodeURIComponent(refId.trim())}` : ''}`;
+
           if (jobIdsSeen.has(jobId)) {
             logger.info(`跳过重复的职位ID: ${jobId}`);
             continue;
           }
           jobIdsSeen.add(jobId);
-          
+
           // 提取标题 - 避免XSS和HTML
           const titleEl = await card.$(".base-search-card__title");
           const title = titleEl ? 
@@ -180,10 +188,7 @@ async function getLinkedinJobs(page, keywords, location, maxJobs = 20, fetchDeta
           const postedDate = postedEl ? (await postedEl.getAttribute("datetime")) : "N/A";
           const postedText = postedEl ? 
             (await postedEl.evaluate(el => el.textContent.trim())) : "N/A";
-          
-          // 构建详情页URL
-          const detailUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}${refId ? `?refId=${encodeURIComponent(refId.trim())}` : ''}`;
-          
+
           const jobInfo = {
             job_id: jobId.trim(),
             title: title,
@@ -191,10 +196,11 @@ async function getLinkedinJobs(page, keywords, location, maxJobs = 20, fetchDeta
             location: location,
             posted_date_attr: postedDate,
             posted_text: postedText,
-            link: detailUrl,
+            link: userLink || `https://www.linkedin.com/jobs/view/${jobId}`, // 用户访问的链接
+            detail_url: detailUrl, // 用于获取数据的API URL
             ref_id: refId ? refId.trim() : '',
           };
-          
+
           allJobsData.push(jobInfo);
           logger.info(`提取基本信息: ${title} at ${company}`);
           
@@ -206,7 +212,7 @@ async function getLinkedinJobs(page, keywords, location, maxJobs = 20, fetchDeta
           continue;
         }
       }
-      
+
       // 准备获取下一页
       currentPage++;
       start += 25; // LinkedIn每页请求参数增加25
@@ -257,8 +263,8 @@ async function getLinkedinJobs(page, keywords, location, maxJobs = 20, fetchDeta
           try {
             logger.info(`爬取第 ${i+1}/${maxDetailsToFetch} 个职位详情: ${job.job_id}`);
             
-            // 构建直接API URL
-            const detailUrl = job.link;
+            // 使用API URL获取详情数据
+            const detailUrl = job.detail_url;
             
             await page.goto(detailUrl, { 
               waitUntil: "domcontentloaded",
@@ -270,7 +276,7 @@ async function getLinkedinJobs(page, keywords, location, maxJobs = 20, fetchDeta
             
             // 提取详情数据
             const details = await extractJobDetails(page);
-            Object.assign(job, details);
+          Object.assign(job, details);
             
             // 保存到缓存
             if (CONFIG.useCache && job.job_id) {
@@ -310,6 +316,7 @@ async function extractJobDetails(page) {
     job_description: "未找到",
     applicants_count: "未找到",
     salary_range: "未找到",
+    salary_numeric: null,  // 添加新字段
     job_criteria: {},
     is_remote: false
   };
@@ -425,18 +432,21 @@ async function extractJobDetails(page) {
             // 过滤出薪资相关文本
             const fullText = el.textContent.trim();
             // 匹配薪资相关格式
-            const salaryMatch = fullText.match(/[\$¥€£]\s*[\d,.]+([\s\-]+[\$¥€£]?[\d,.]+)?(\s*\/\s*[a-zA-Z]+)?/);
+            const salaryMatch = fullText.match(/[\$¥€£₹]\s*[\d,.]+([\s\-]+[\$¥€£₹]?[\d,.]+)?(\s*\/\s*[a-zA-Z]+)?/);
             return salaryMatch ? salaryMatch[0].trim() : fullText;
           });
           
           if (text && (
               text.includes("$") || text.includes("¥") || 
               text.includes("€") || text.includes("£") || 
-              text.includes("元") || text.includes("万") ||
+              text.includes("₹") || text.includes("元") || 
+              text.includes("万") ||
               /\d+[Kk]/.test(text) || // 匹配50K这样的格式
               /\d+.*\d+/.test(text)   // 匹配有数字区间的格式
             )) {
             details.salary_range = text;
+            // 转换薪资为美元年薪
+            details.salary_numeric = await convertSalaryToUSD(text);
             break;
           }
         } catch (e) {
@@ -574,11 +584,16 @@ export default async function handler(req, res) {
       f_SB2     // 薪资过滤
     } = params;
 
-    if (!keywords || !location) {
-      res.status(400).json({ error: '关键词和地点为必填项' });
+    if (!keywords) {
+      res.status(400).json({ error: '关键词为必填项' });
       return;
     }
-    
+
+    if (!location && !geoId) {
+      res.status(400).json({ error: '地点或地区为必填项' });
+      return;
+    }
+
     // 处理多选过滤器，将逗号分隔字符串转为数组
     const filters = {
       geoId,
@@ -625,7 +640,7 @@ export default async function handler(req, res) {
       });
       
       const page = await context.newPage();
-      
+
       // 监听页面错误
       page.on('pageerror', error => {
         logger.error(`页面错误: ${error.message}`);
@@ -659,6 +674,16 @@ export default async function handler(req, res) {
           jobs.forEach(job => {
             // 确保is_remote字段存在，转换为布尔值
             job.is_remote = !!job.is_remote; 
+            
+            // 确保salary_numeric字段存在
+            if (job.salary_range && !job.salary_numeric) {
+              convertSalaryToUSD(job.salary_range).then(numericSalary => {
+                job.salary_numeric = numericSalary;
+              }).catch(error => {
+                logger.error(`转换薪资失败: ${error.message}`);
+                job.salary_numeric = null;
+              });
+            }
             
             // 标准化job_criteria中的字段名称（如果有）
             if (job.job_criteria) {

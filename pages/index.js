@@ -5,10 +5,13 @@ import JobFilter from '../components/JobFilter';
 import Settings from '../components/Settings';
 import AdvancedFilters from '../components/AdvancedFilters';
 import JobDetail from '../components/JobDetail';
+import { regions } from '../utils/regions';
 
 export default function Home() {
   const [keywords, setKeywords] = useState("");
   const [location, setLocation] = useState("");
+  const [isPresetLocation, setIsPresetLocation] = useState(false);
+  const [selectedGeoId, setSelectedGeoId] = useState("");
   const [loading, setLoading] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState("");
@@ -34,8 +37,13 @@ export default function Home() {
   // 处理搜索表单提交
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!keywords || !location) {
-      setError('请输入关键词和地点');
+    if (!keywords) {
+      setError('请输入关键词');
+      return;
+    }
+
+    if (!location) {
+      setError('请输入地点');
       return;
     }
 
@@ -52,11 +60,18 @@ export default function Home() {
     // 构建查询参数
     const queryParams = {
       keywords,
-      location,
       maxJobs: settings.maxJobs.toString(),
       fetchDetails: 'true',
       maxJobDetails: settings.maxJobDetails.toString()
     };
+
+    // 如果是预设地点，使用 geoId
+    if (isPresetLocation && selectedGeoId) {
+      queryParams.geoId = selectedGeoId;
+    } else {
+      // 否则使用 location
+      queryParams.location = location;
+    }
 
     // 添加高级过滤条件
     if (advancedFilters.f_TPR) {
@@ -198,6 +213,8 @@ export default function Home() {
   const handleReset = () => {
     setKeywords("");
     setLocation("");
+    setIsPresetLocation(false);
+    setSelectedGeoId("");
     setJobs([]);
     setSortedJobs([]);
     setFilteredJobs([]);
@@ -221,6 +238,27 @@ export default function Home() {
   // 关闭职位详情
   const closeJobDetail = () => {
     setSelectedJob(null);
+  };
+
+  // 处理地点输入变化
+  const handleLocationChange = (e) => {
+    const value = e.target.value;
+    setLocation(value);
+    
+    // 检查是否是预设选项
+    let found = false;
+    let geoId = "";
+    
+    Object.entries(regions).forEach(([regionKey, region]) => {
+      const country = region.countries.find(c => c.name === value);
+      if (country) {
+        found = true;
+        geoId = country.geoId;
+      }
+    });
+    
+    setIsPresetLocation(found);
+    setSelectedGeoId(geoId);
   };
 
   return (
@@ -289,15 +327,26 @@ export default function Home() {
                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                       </svg>
                     </div>
-                    <input
-                      type="text"
-                      id="location"
-                      className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-3 py-3 border-gray-300 rounded-md text-gray-900 placeholder-gray-400"
-                      placeholder="例如：Worldwide, Europe, USA..."
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="location"
+                        list="location-options"
+                        className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-3 py-3 border-gray-300 rounded-md text-gray-900 placeholder-gray-400"
+                        placeholder="选择地区或输入地点"
+                        value={location}
+                        onChange={handleLocationChange}
+                      />
+                      <datalist id="location-options">
+                        {Object.entries(regions).map(([regionKey, region]) => (
+                          <optgroup key={regionKey} label={region.name}>
+                            {region.countries.map(country => (
+                              <option key={country.geoId} value={country.name} />
+                            ))}
+                          </optgroup>
+                        ))}
+                      </datalist>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -306,7 +355,7 @@ export default function Home() {
                 <button
                   type="submit"
                   className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors flex items-center justify-center min-w-[130px]"
-                  disabled={!keywords || !location || loading}
+                  disabled={!keywords || (!location && !selectedRegion) || loading}
                 >
                   {loading ? (
                     <div className="flex items-center">

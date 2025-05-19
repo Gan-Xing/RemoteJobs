@@ -8,11 +8,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
-   datasource db {
-     provider  = "postgresql"
-     url       = env("DATABASE_URL")
-     directUrl = env("DIRECT_URL")
-   }
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
 
 model Job {
   id                    String   @id @default(uuid())
@@ -23,6 +23,7 @@ model Job {
   description           String?  @db.Text  // 职位描述 (job_description)
   url                   String   @unique  // 职位链接 (link)
   salary                String?  // 薪资范围 (salary_range)
+  salaryNumeric         Float?   // 转换后的年薪数值（美元）
   postedAt              DateTime?  // 发布日期 (posted_date_attr)
   postedText            String?  // 发布日期文本 (posted_text)
   applicantsCount       String?  // 申请人数 (applicants_count)
