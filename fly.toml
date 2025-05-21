@@ -17,7 +17,7 @@ primary_region = 'lhr'
   processes = ['app']
 
 [[vm]]
-  memory = '256mb'
+  memory = '1024mb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 256
+  memory_mb = 1024
