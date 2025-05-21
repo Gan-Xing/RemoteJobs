@@ -355,7 +355,7 @@ export default function Home() {
                 <button
                   type="submit"
                   className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors flex items-center justify-center min-w-[130px]"
-                  disabled={!keywords || (!location && !selectedRegion) || loading}
+                  disabled={!keywords || (!location && !selectedGeoId) || loading}
                 >
                   {loading ? (
                     <div className="flex items-center">

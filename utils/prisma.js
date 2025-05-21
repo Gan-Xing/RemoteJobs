@@ -42,13 +42,18 @@ export const saveJobs = async (jobs) => {
   let retryCount = 0;
   const maxRetries = 3;
   
+  console.log(`[数据库] 开始保存 ${jobs.length} 个职位数据到数据库...`);
+  
   while (retryCount < maxRetries) {
     try {
       // 检查数据库连接
+      console.log(`[数据库] 检查数据库连接 (尝试 ${retryCount + 1}/${maxRetries})...`);
       const isConnected = await checkDatabaseConnection();
       if (!isConnected) {
+        console.error(`[数据库] ❌ 数据库连接失败`);
         throw new Error('数据库连接失败');
       }
+      console.log(`[数据库] ✅ 数据库连接成功`);
       
       const jobsData = jobs.map(job => {
         // 从 job_criteria 提取职位标准信息
@@ -82,6 +87,8 @@ export const saveJobs = async (jobs) => {
         return true;
       });
 
+      console.log(`[数据库] 准备保存 ${validJobsData.length} 个有效职位数据`);
+
       // 使用更小的批量大小
       const batchSize = 10; // 减小批量大小
       const batches = [];
@@ -91,9 +98,15 @@ export const saveJobs = async (jobs) => {
         batches.push(validJobsData.slice(i, i + batchSize));
       }
 
+      console.log(`[数据库] 将数据分为 ${batches.length} 个批次进行保存`);
+
       // 串行处理每个批次
       const results = [];
-      for (const batch of batches) {
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        console.log(`[数据库] 开始处理第 ${i+1}/${batches.length} 批次，包含 ${batch.length} 个职位...`);
+        
+        try {
         const batchResult = await prisma.$transaction(async (tx) => {
           const operations = batch.map(job => {
             return tx.job.upsert({
@@ -131,19 +144,33 @@ export const saveJobs = async (jobs) => {
           
           return await Promise.all(operations);
         }, {
-          timeout: 15000 // 增加事务超时时间到15秒
+            timeout: 15000 // 增加到15秒超时时间
         });
         
+          console.log(`[数据库] ✅ 第 ${i+1}/${batches.length} 批次保存成功`);
         results.push(batchResult);
+        } catch (batchError) {
+          console.error(`[数据库] ❌ 第 ${i+1}/${batches.length} 批次保存失败:`, batchError);
+          throw batchError; // 将错误继续抛出以便重试整个保存过程
+        }
       }
       
+      console.log(`[数据库] ✅ 所有数据保存完成，共保存 ${results.flat().length} 个职位`);
       return results.flat();
     } catch (error) {
-      console.error(`重试 ${retryCount + 1} 失败:`, error);
+      console.error(`[数据库] ❌ 尝试 ${retryCount + 1}/${maxRetries} 失败:`, error);
+      if (error.stack) {
+        console.error(`[数据库] 错误堆栈:`, error.stack);
+      }
+      
       retryCount++;
       if (retryCount < maxRetries) {
         // 在重试之前等待一段时间
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        const waitTime = 1000 * retryCount;
+        console.log(`[数据库] 将在 ${waitTime/1000} 秒后重试...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      } else {
+        console.error(`[数据库] ❌ 已重试 ${maxRetries} 次，全部失败`);
       }
     }
   }

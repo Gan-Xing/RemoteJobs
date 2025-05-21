@@ -45,3 +45,13 @@ model Job {
   searchCount           Int      @default(1)  // 搜索次数
   lastSearchedAt        DateTime @default(now())  // 最后被搜索的时间
 }
+
+// 任务进度模型
+model TaskProgress {
+  id            String   @id @default("current")
+  geoIndex      Int      // 当前地理位置索引
+  keywordIndex  Int      // 当前关键词索引
+  step          Int      // 当前步骤
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
