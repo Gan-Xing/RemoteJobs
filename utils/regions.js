@@ -2,8 +2,6 @@ export const regions = {
   asiaPacific: {
     name: '亚太',
     countries: [
-      // { name: '澳大利亚', geoId: '101452733' },
-      { name: '日本', geoId: '101355337' },
       { name: '韩国', geoId: '105149562' },
       { name: '新加坡', geoId: '102454443' },
       // { name: '印度', geoId: '102713980' },
@@ -45,6 +43,9 @@ export const regions = {
       { name: '阿联酋', geoId: '104305776' },
       // { name: '南非', geoId: '104035573' },
       // { name: '阿根廷', geoId: '100446943' }
+      // 已经爬取
+      { name: '澳大利亚', geoId: '101452733' },
+      { name: '日本', geoId: '101355337' },
     ]
   }
 }; 
