@@ -231,17 +231,14 @@ export const taskConfig = {
     "html css", "tailwind", "bootstrap"
   ],
   steps: [
-    { f_WT: ['2'] },
-    { f_WT: ['2'], f_SB2: '1' },
-    { f_WT: ['2'], f_SB2: '2' },
-    { f_WT: ['2'], f_SB2: '3' },
-    { f_WT: ['2'], f_SB2: '4' },
-    { f_WT: ['2'], f_SB2: '4', f_JT: ['F'] },
-    { f_WT: ['2'], f_SB2: '4', f_JT: ['F'], f_TPR: 'r31536000' },
-    { f_WT: ['2'], f_SB2: '4', f_JT: ['F'], f_TPR: 'r7776000' },
-    { f_WT: ['2'], f_SB2: '4', f_JT: ['F'], f_TPR: 'r2592000' },
-    { f_WT: ['2'], f_SB2: '4', f_JT: ['F'], f_TPR: 'r604800' },
-    { f_WT: ['2'], f_SB2: '4', f_JT: ['F'], f_TPR: 'r86400' }
+    // { f_WT: ['2'] },
+    // { f_WT: ['2'], f_SB2: '1' },
+    { f_WT: ['2'], f_SB2: '1', f_JT: ['F'] },
+    { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r31536000' },
+    { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r7776000' },
+    { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r2592000' },
+    { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r604800' },
+    { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r86400' }
   ]
 };
 
