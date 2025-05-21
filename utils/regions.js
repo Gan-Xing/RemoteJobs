@@ -2,7 +2,7 @@ export const regions = {
   asiaPacific: {
     name: '亚太',
     countries: [
-      { name: '澳大利亚', geoId: '101452733' },
+      // { name: '澳大利亚', geoId: '101452733' },
       { name: '日本', geoId: '101355337' },
       { name: '韩国', geoId: '105149562' },
       { name: '新加坡', geoId: '102454443' },
