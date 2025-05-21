@@ -1,20 +1,32 @@
-import { useState, useEffect } from 'react';
-import Head from 'next/head';
-import TaskStatus from '../components/TaskStatus';
-import TaskControls from '../components/TaskControls';
-import KeywordManager from '../components/KeywordManager';
-import LocalStorageMonitor from '../components/LocalStorageMonitor';
+import { useState, useEffect } from "react";
+import Head from "next/head";
+import TaskStatus from "../components/TaskStatus";
+import TaskControls from "../components/TaskControls";
+import KeywordManager from "../components/KeywordManager";
+import LocalStorageMonitor from "../components/LocalStorageMonitor";
 
 export default function TaskControl() {
-  const [status, setStatus] = useState({ status: 'loading', running: false });
+  const [status, setStatus] = useState({ status: "loading", running: false });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [keywords, setKeywords] = useState([
-    "nodejs","fullstack","react","web developer",
-    "frontend","javascript", "typescript",
-    "vue","angular","nextjs","nuxtjs",
-    "svelte","ember.js","extjs",
-    "html css", "tailwind", "bootstrap"
+    "nodejs",
+    "fullstack",
+    "react",
+    "web developer",
+    "frontend",
+    "javascript",
+    "typescript",
+    "vue",
+    "angular",
+    "nextjs",
+    "nuxtjs",
+    "svelte",
+    "ember.js",
+    "extjs",
+    "html css",
+    "tailwind",
+    "bootstrap",
   ]);
 
   // 处理任务状态更新
@@ -27,7 +39,7 @@ export default function TaskControl() {
     // 加载关键词
     const fetchKeywords = async () => {
       try {
-        const res = await fetch('/api/task/keywords');
+        const res = await fetch("/api/task/keywords");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.keywords)) {
@@ -35,10 +47,10 @@ export default function TaskControl() {
           }
         }
       } catch (error) {
-        console.error('获取关键词失败:', error);
+        console.error("获取关键词失败:", error);
       }
     };
-    
+
     fetchKeywords();
   }, []);
 
@@ -48,60 +60,68 @@ export default function TaskControl() {
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
     const reconnectDelay = 2000; // 2秒
-    
+
     const connectSSE = () => {
-      console.log('建立状态更新连接...');
-      eventSource = new EventSource('/api/task/sse');
-      
+      console.log("建立状态更新连接...");
+      eventSource = new EventSource("/api/task/sse");
+
       eventSource.onmessage = (event) => {
         try {
           const newStatus = JSON.parse(event.data);
-          console.log('收到状态更新:', newStatus);
-          
+          console.log("收到状态更新:", newStatus);
+
           // 状态变化监控
-          if (status.status !== newStatus.status || status.running !== newStatus.running) {
-            console.log('状态发生变化!', 
+          if (
+            status.status !== newStatus.status ||
+            status.running !== newStatus.running
+          ) {
+            console.log(
+              "状态发生变化!",
               `之前: [status=${status.status}, running=${status.running}]`,
               `现在: [status=${newStatus.status}, running=${newStatus.running}]`
             );
           }
-          
+
           // 重要: 更新状态
           handleStatusChange(newStatus);
-          
+
           // 重置重连尝试次数
           reconnectAttempts = 0;
         } catch (error) {
-          console.error('解析状态更新失败:', error, event.data);
+          console.error("解析状态更新失败:", error, event.data);
         }
       };
 
       eventSource.onerror = (error) => {
-        console.error('状态更新连接错误:', error);
+        console.error("状态更新连接错误:", error);
         eventSource.close();
-        
+
         // 尝试重连
         if (reconnectAttempts < maxReconnectAttempts) {
           reconnectAttempts++;
-          console.log(`尝试重新连接... (${reconnectAttempts}/${maxReconnectAttempts})`);
+          console.log(
+            `尝试重新连接... (${reconnectAttempts}/${maxReconnectAttempts})`
+          );
           setTimeout(connectSSE, reconnectDelay);
         } else {
-          console.error(`已达到最大重连次数 (${maxReconnectAttempts})，停止尝试`);
+          console.error(
+            `已达到最大重连次数 (${maxReconnectAttempts})，停止尝试`
+          );
         }
       };
 
       eventSource.onopen = () => {
-        console.log('状态更新连接已建立');
+        console.log("状态更新连接已建立");
         // 重置重连尝试次数
         reconnectAttempts = 0;
       };
     };
-    
+
     // 建立初始连接
     connectSSE();
 
     return () => {
-      console.log('关闭状态更新连接');
+      console.log("关闭状态更新连接");
       if (eventSource) {
         eventSource.close();
       }
@@ -110,231 +130,227 @@ export default function TaskControl() {
 
   // 监视状态变化
   useEffect(() => {
-    console.log('状态已更新:', status);
+    console.log("状态已更新:", status);
   }, [status]);
 
   const handleStart = async () => {
     try {
-      console.log('发送启动任务请求...');
-      
+      console.log("发送启动任务请求...");
+
       // 立即更新状态，不等待响应
-      console.log('预先更新状态为running...');
-      setStatus(prev => ({
+      console.log("预先更新状态为running...");
+      setStatus((prev) => ({
         ...prev,
-        status: 'running',
-        running: true
+        status: "running",
+        running: true,
       }));
-      
-      console.log('状态更新后:', status); // 这里打印的可能是旧状态，因为setState是异步的
-      
-      const response = await fetch('/api/task/start', {
-        method: 'POST',
+
+      console.log("状态更新后:", status); // 这里打印的可能是旧状态，因为setState是异步的
+
+      const response = await fetch("/api/task/start", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ keywords }),
       });
-      
+
       const data = await response.json();
-      console.log('启动任务响应:', data);
-      
+      console.log("启动任务响应:", data);
+
       if (!response.ok) {
-        console.error('启动任务失败:', data.error);
-        
+        console.error("启动任务失败:", data.error);
+
         // 恢复到原状态
-        setStatus(prev => ({
+        setStatus((prev) => ({
           ...prev,
-          status: 'stopped',
-          running: false
+          status: "stopped",
+          running: false,
         }));
-        
-        throw new Error('启动任务失败');
+
+        throw new Error("启动任务失败");
       }
-      
+
       // 使用响应数据更新状态（如果后端发送了任何额外数据）
-      setStatus(prev => ({
+      setStatus((prev) => ({
         ...prev,
-        status: data.status || 'running',
+        status: data.status || "running",
         running: true,
-        lastError: null
+        lastError: null,
       }));
-      
+
       // 强制刷新
       setTimeout(() => {
-        console.log('强制检查状态更新:', status);
+        console.log("强制检查状态更新:", status);
       }, 100);
-      
     } catch (error) {
-      console.error('启动任务错误:', error);
-      
+      console.error("启动任务错误:", error);
+
       // 确保状态恢复到停止
-      setStatus(prev => ({
+      setStatus((prev) => ({
         ...prev,
-        status: 'stopped',
+        status: "stopped",
         running: false,
-        lastError: error.message
+        lastError: error.message,
       }));
     }
   };
 
   const handlePause = async () => {
     try {
-      console.log('发送暂停任务请求...');
-      
+      console.log("发送暂停任务请求...");
+
       // 立即更新前端状态
-      console.log('预先更新状态为paused...');
-      setStatus(prev => ({
+      console.log("预先更新状态为paused...");
+      setStatus((prev) => ({
         ...prev,
-        status: 'paused',
-        running: false
+        status: "paused",
+        running: false,
       }));
-      
-      const response = await fetch('/api/task/pause', {
-        method: 'POST',
+
+      const response = await fetch("/api/task/pause", {
+        method: "POST",
       });
-      
+
       const data = await response.json();
-      console.log('暂停任务响应:', data);
-      
+      console.log("暂停任务响应:", data);
+
       if (!response.ok) {
-        console.error('暂停任务失败:', data.error);
-        
+        console.error("暂停任务失败:", data.error);
+
         // 恢复到原状态
-        setStatus(prev => ({
+        setStatus((prev) => ({
           ...prev,
-          status: 'running',
-          running: true
+          status: "running",
+          running: true,
         }));
-        
-        throw new Error('暂停任务失败');
+
+        throw new Error("暂停任务失败");
       }
-      
+
       // 确保状态最终与服务器响应一致
-      setStatus(prev => ({
+      setStatus((prev) => ({
         ...prev,
-        status: data.status || 'paused',
-        running: false
+        status: data.status || "paused",
+        running: false,
       }));
-      
     } catch (error) {
-      console.error('暂停任务错误:', error);
+      console.error("暂停任务错误:", error);
     }
   };
 
   const handleResume = async () => {
     try {
-      console.log('发送恢复任务请求...');
-      
+      console.log("发送恢复任务请求...");
+
       // 立即更新前端状态
-      console.log('预先更新状态为running...');
-      setStatus(prev => ({
+      console.log("预先更新状态为running...");
+      setStatus((prev) => ({
         ...prev,
-        status: 'running',
-        running: true
+        status: "running",
+        running: true,
       }));
-      
-      const response = await fetch('/api/task/resume', {
-        method: 'POST',
+
+      const response = await fetch("/api/task/resume", {
+        method: "POST",
       });
-      
+
       const data = await response.json();
-      console.log('恢复任务响应:', data);
-      
+      console.log("恢复任务响应:", data);
+
       if (!response.ok) {
-        console.error('恢复任务失败:', data.error);
-        
+        console.error("恢复任务失败:", data.error);
+
         // 恢复到原状态
-        setStatus(prev => ({
+        setStatus((prev) => ({
           ...prev,
-          status: 'paused',
-          running: false
+          status: "paused",
+          running: false,
         }));
-        
-        throw new Error('恢复任务失败');
+
+        throw new Error("恢复任务失败");
       }
-      
+
       // 确保状态最终与服务器响应一致
-      setStatus(prev => ({
+      setStatus((prev) => ({
         ...prev,
-        status: data.status || 'running',
-        running: true
+        status: data.status || "running",
+        running: true,
       }));
-      
     } catch (error) {
-      console.error('恢复任务错误:', error);
+      console.error("恢复任务错误:", error);
     }
   };
 
   const handleStop = async () => {
     try {
-      console.log('发送停止任务请求...');
-      
+      console.log("发送停止任务请求...");
+
       // 立即更新前端状态
-      console.log('预先更新状态为stopped...');
-      setStatus(prev => ({
+      console.log("预先更新状态为stopped...");
+      setStatus((prev) => ({
         ...prev,
-        status: 'stopped',
-        running: false
+        status: "stopped",
+        running: false,
       }));
-      
-      const response = await fetch('/api/task/stop', {
-        method: 'POST',
+
+      const response = await fetch("/api/task/stop", {
+        method: "POST",
       });
-      
+
       const data = await response.json();
-      console.log('停止任务响应:', data);
-      
+      console.log("停止任务响应:", data);
+
       if (!response.ok) {
-        console.error('停止任务失败:', data.error);
-        
+        console.error("停止任务失败:", data.error);
+
         // 恢复到原状态（取决于停止前的状态）
-        setStatus(prev => ({
+        setStatus((prev) => ({
           ...prev,
           status: prev.status, // 保持原来的状态
-          running: prev.running
+          running: prev.running,
         }));
-        
-        throw new Error('停止任务失败');
+
+        throw new Error("停止任务失败");
       }
-      
+
       // 确保状态重置
-      setStatus(prev => ({
+      setStatus((prev) => ({
         ...prev,
-        status: 'stopped',
+        status: "stopped",
         running: false,
-        geoId: '',
-        keyword: '',
+        geoId: "",
+        keyword: "",
         step: 0,
         geoIndex: 0,
         keywordIndex: 0,
         startedAt: null,
         elapsedSec: 0,
         lastBatchCount: 0,
-        lastError: null
+        lastError: null,
       }));
-      
     } catch (error) {
-      console.error('停止任务错误:', error);
+      console.error("停止任务错误:", error);
     }
   };
 
   const handleKeywordsUpdate = async (newKeywords) => {
     try {
-      const response = await fetch('/api/task/keywords', {
-        method: 'POST',
+      const response = await fetch("/api/task/keywords", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ keywords: newKeywords }),
       });
-      
+
       if (!response.ok) {
-        throw new Error('更新关键词失败');
+        throw new Error("更新关键词失败");
       }
-      
+
       setKeywords(newKeywords);
     } catch (error) {
-      console.error('更新关键词错误:', error);
+      console.error("更新关键词错误:", error);
     }
   };
 
@@ -346,90 +362,118 @@ export default function TaskControl() {
       </Head>
 
       <header className="bg-white shadow-sm py-5">
-        <div className="container mx-auto px-4">
-          <h1 className="text-2xl font-bold text-indigo-600">远程岗位抓取任务控制</h1>
-          <div className={`mt-2 px-3 py-1 inline-block rounded-full text-sm font-medium ${
-            status.running 
-              ? 'bg-green-100 text-green-800 border border-green-200' 
-              : status.status === 'paused'
-                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                : 'bg-gray-100 text-gray-800 border border-gray-200'
-          }`}>
-            任务状态: <span className="font-bold">{status.status}</span>
-            {status.running && <span className="ml-1 animate-pulse">●</span>}
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <div className="flex center items-center gap-4">
+            <h1 className="text-2xl font-bold text-indigo-600">
+              远程岗位抓取任务控制
+            </h1>
+            <div
+              className={`px-3 py-1 inline-block rounded-full text-sm font-medium ${
+                status.running
+                  ? "bg-green-100 text-green-800 border border-green-200"
+                  : status.status === "paused"
+                  ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                  : "bg-gray-100 text-gray-800 border border-gray-200"
+              }`}
+            >
+              任务状态: <span className="font-bold">{status.status}</span>
+              {status.running && <span className="ml-1 animate-pulse">●</span>}
+            </div>
+          </div>
+          {/* 任务控制卡片 */}
+          <div>
+            <TaskControls
+              status={status}
+              onStart={handleStart}
+              onPause={handlePause}
+              onResume={handleResume}
+              onStop={handleStop}
+            />
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto py-10 px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <main className="container mx-auto py-5 px-4 flex flex-col">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* 左列：任务状态和控制 */}
-          <div className="space-y-8">
+          <div className="lg:w-1/2 space-y-8">
             {/* 任务状态卡片 */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 mr-2 text-blue-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 任务状态
               </h2>
               {/* 调试信息 */}
-              <div className="text-xs text-gray-500 mb-2 p-2 bg-gray-50 rounded overflow-auto max-h-28" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>
+              <div
+                className="text-xs text-gray-500 mb-2 p-2 bg-gray-50 rounded overflow-auto max-h-28"
+                style={{ wordBreak: "break-all", overflowWrap: "break-word" }}
+              >
                 状态对象: {JSON.stringify(status)}
               </div>
               <TaskStatus status={status} onStatusChange={handleStatusChange} />
             </div>
-            
-            {/* 任务控制卡片 */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                任务控制
-              </h2>
-              <TaskControls 
-                status={status}
-                onStart={handleStart}
-                onPause={handlePause}
-                onResume={handleResume}
-                onStop={handleStop}
-              />
-            </div>
-           
             {/* 本地存储监控 */}
             <LocalStorageMonitor />
           </div>
-          
+
           {/* 右列：关键词管理 */}
-          <div className="space-y-8">
+          <div className="lg:w-1/2 flex flex-col h-full space-y-8">
             {/* 关键词输入区域 */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 mr-2 text-purple-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                  />
                 </svg>
                 关键词设置
               </h2>
               {/* 使用简单文本框替代不存在的组件 */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">输入关键词（用逗号分隔）</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  输入关键词（用逗号分隔）
+                </label>
                 <textarea
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  rows="4"
+                  rows="2"
                   value={keywords.join(", ")}
-                  onChange={(e) => setKeywords(e.target.value.split(",").map(k => k.trim()))}
+                  onChange={(e) =>
+                    setKeywords(e.target.value.split(",").map((k) => k.trim()))
+                  }
                 ></textarea>
-                <div className="mt-2 text-xs text-gray-500">已设置 {keywords.length} 个关键词</div>
+                <div className="mt-2 text-xs text-gray-500">
+                  已设置 {keywords.length} 个关键词
+                </div>
               </div>
             </div>
-            
+
             {/* 关键词管理区域 */}
-            <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-[calc(92vh)]">
+            <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col flex-grow">
               <h2 className="text-xl font-semibold mb-4">关键词管理</h2>
-              <div className="flex-grow overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                <KeywordManager 
+              <div className="flex-grow overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 h-[280px]">
+                <KeywordManager
                   keywords={keywords}
                   onUpdate={handleKeywordsUpdate}
                 />
@@ -440,4 +484,4 @@ export default function TaskControl() {
       </main>
     </div>
   );
-} 
+}
