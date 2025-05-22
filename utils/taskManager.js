@@ -1095,7 +1095,38 @@ async function executeTask() {
               console.log(`[任务管理器] 执行搜索页 ${currentPage+1}: ${fullUrl}`);
               
               // 爬取数据
-              await page.goto(fullUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+              let pageLoadRetries = 0;
+              const MAX_PAGE_LOAD_RETRIES = 100; // 设置一个较大的值，本质上是无限重试，直到用户停止
+              let pageLoaded = false;
+
+              while (!pageLoaded && pageLoadRetries < MAX_PAGE_LOAD_RETRIES) {
+                try {
+                  // 每次重试前检查任务状态
+                  await checkInterruption();
+                  
+                  await page.goto(fullUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
+                  pageLoaded = true;
+                } catch (pageError) {
+                  if (pageError.name === 'TimeoutError') {
+                    pageLoadRetries++;
+                    console.log(`[任务管理器] 页面加载超时 (${pageLoadRetries}次)，1分钟后自动重试...`);
+                    
+                    // 更新任务状态，显示重试信息
+                    updateTaskState({ 
+                      lastError: `页面加载超时，将在1分钟后自动重试 (第${pageLoadRetries}次重试)` 
+                    });
+                    
+                    // 等待1分钟后重试
+                    await page.waitForTimeout(60000);
+                  } else {
+                    // 其他错误直接抛出
+                    console.error(`[任务管理器] 页面加载错误:`, pageError);
+                    throw pageError;
+                  }
+                }
+              }
+              
+              // 成功加载页面后继续
               await page.waitForTimeout(1000);
               
               // 获取职位卡片
@@ -1258,10 +1289,45 @@ async function executeTask() {
                     await checkInterruption();
                     
                     // 设置较短的导航超时
-                    await page.goto(job.detail_url, { 
-                      waitUntil: "domcontentloaded", 
-                      timeout: 15000 // 减少超时时间，以便更快响应停止命令
-                    });
+                    let detailPageLoaded = false;
+                    let detailPageRetries = 0;
+                    const MAX_DETAIL_PAGE_RETRIES = 100; // 设置较大的值，本质上是无限重试
+                    
+                    while (!detailPageLoaded && detailPageRetries < MAX_DETAIL_PAGE_RETRIES) {
+                      try {
+                        // 每次重试前检查任务状态
+                        await checkInterruption();
+                        
+                        await page.goto(job.detail_url, { 
+                          waitUntil: "domcontentloaded", 
+                          timeout: 30000 // 增加超时时间
+                        });
+                        detailPageLoaded = true;
+                      } catch (detailError) {
+                        if (detailError.name === 'TimeoutError') {
+                          detailPageRetries++;
+                          console.log(`[任务管理器] 职位详情页加载超时 (${detailPageRetries}次)，1分钟后自动重试...`);
+                          
+                          // 更新任务状态，显示重试信息
+                          updateTaskState({ 
+                            lastError: `职位详情页加载超时，将在1分钟后自动重试 (第${detailPageRetries}次重试)` 
+                          });
+                          
+                          // 等待1分钟后重试
+                          await page.waitForTimeout(60000);
+                        } else {
+                          // 其他错误继续处理下一个职位
+                          console.error(`[任务管理器] 导航到职位详情页失败:`, detailError.message);
+                          detailPageLoaded = true; // 跳出循环
+                          throw detailError; // 向外抛出错误
+                        }
+                      }
+                    }
+                    
+                    // 如果达到最大重试次数仍未成功，跳过此职位
+                    if (!detailPageLoaded) {
+                      throw new Error(`职位详情页加载失败，已重试${MAX_DETAIL_PAGE_RETRIES}次`);
+                    }
                   } catch (navError) {
                     console.error(`[任务管理器] 导航到职位详情页失败:`, navError.message);
                     continue; // 跳过此职位，继续处理下一个
@@ -1269,8 +1335,8 @@ async function executeTask() {
                   
                   // 在获取详情后立即检查任务状态
                   await checkInterruption();
-                  
-                  await page.waitForTimeout(1000);
+
+                  await page.waitForTimeout(Math.random() * 200 + 200);
                   
                   // 再次检查任务状态，确保即使在处理过程中收到停止命令也能及时响应
                   await checkInterruption();

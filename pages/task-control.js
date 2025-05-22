@@ -394,43 +394,12 @@ export default function TaskControl() {
       </header>
 
       <main className="container mx-auto py-5 px-4 flex flex-col">
+        {/* 状态显示区域 */}
+        <TaskStatus status={status} onStatusChange={handleStatusChange} />
+
         <div className="flex flex-col lg:flex-row gap-8">
           {/* 左列：任务状态和控制 */}
           <div className="lg:w-1/2 space-y-8">
-            {/* 任务状态卡片 */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 mr-2 text-blue-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                任务状态
-              </h2>
-              {/* 调试信息 */}
-              <div
-                className="text-xs text-gray-500 mb-2 p-2 bg-gray-50 rounded overflow-auto max-h-28"
-                style={{ wordBreak: "break-all", overflowWrap: "break-word" }}
-              >
-                状态对象: {JSON.stringify(status)}
-              </div>
-              <TaskStatus status={status} onStatusChange={handleStatusChange} />
-            </div>
-            {/* 本地存储监控 */}
-            <LocalStorageMonitor />
-          </div>
-
-          {/* 右列：关键词管理 */}
-          <div className="lg:w-1/2 flex flex-col h-full space-y-8">
             {/* 关键词输入区域 */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
@@ -469,10 +438,16 @@ export default function TaskControl() {
               </div>
             </div>
 
+            {/* 本地存储监控 */}
+            <LocalStorageMonitor />
+          </div>
+
+          {/* 右列：关键词管理 */}
+          <div className="lg:w-1/2 flex flex-col h-full space-y-8">
             {/* 关键词管理区域 */}
             <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col flex-grow">
               <h2 className="text-xl font-semibold mb-4">关键词管理</h2>
-              <div className="flex-grow overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 h-[280px]">
+              <div className="flex-grow overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 h-[23rem]">
                 <KeywordManager
                   keywords={keywords}
                   onUpdate={handleKeywordsUpdate}
@@ -481,6 +456,34 @@ export default function TaskControl() {
             </div>
           </div>
         </div>
+
+        {/* 重试提示 - 当有重试操作时显示 */}
+        {status.lastError && status.lastError.includes("重试") && (
+          <div className="mt-4 p-4 border border-yellow-300 bg-yellow-50 rounded-lg text-yellow-800">
+            <div className="flex items-start">
+              <svg
+                className="w-6 h-6 mr-2 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <div>
+                <h3 className="font-semibold mb-1">系统正在自动重试</h3>
+                <p className="text-sm">{status.lastError}</p>
+                <p className="text-sm mt-2">
+                  您可以随时点击"停止任务"按钮终止自动重试。
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
