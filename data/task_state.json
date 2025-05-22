@@ -2,13 +2,12 @@
   "running": false,
   "status": "stopped",
   "geoId": "103644278",
-  "keyword": "nodejs",
+  "keyword": "javascript",
   "step": 0,
   "geoIndex": 0,
   "keywordIndex": 0,
   "startedAt": null,
   "elapsedSec": 0,
   "lastBatchCount": 0,
-  "lastError": null,
-  "processId": "1747820802147dbvq4744"
+  "lastError": null
 }

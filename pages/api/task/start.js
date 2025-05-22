@@ -1,4 +1,4 @@
-import { startTask } from '../../../utils/taskManager';
+import { startTask, updateScrapeSpeed } from '../../../utils/taskManager';
 
 export default async function handler(req, res) {
   try {
@@ -7,6 +7,16 @@ export default async function handler(req, res) {
     }
 
     console.log('[API] 收到任务启动请求, 方法:', req.method);
+    
+    // 解析请求体中的参数
+    const { keywords, scrapeSpeed } = req.body;
+    
+    // 更新抓取速度设置
+    if (scrapeSpeed) {
+      console.log(`[API] 设置抓取速度为: ${scrapeSpeed}`);
+      // 将抓取速度设置应用到任务管理器
+      updateScrapeSpeed(scrapeSpeed);
+    }
     
     console.log('[API] 调用startTask()开始任务...');
     

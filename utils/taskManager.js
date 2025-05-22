@@ -2,6 +2,77 @@ import { PrismaClient } from '@prisma/client';
 import { regions } from './regions';
 import fs from 'fs';
 import path from 'path';
+import { chromium } from 'playwright';
+import * as fsPromises from 'fs/promises';
+import { existsSync } from 'fs';
+
+// 爬取延迟配置
+const scrapingConfig = {
+  // 页面加载后的延迟
+  pageLoadDelay: {
+    min: 50,    // 最小延迟毫秒数
+    max: 100,   // 最大延迟毫秒数
+  },
+  // 职位处理间隔
+  jobIntervalDelay: {
+    min: 100,   // 最小延迟毫秒数
+    max: 200,   // 最大延迟毫秒数
+    factor: 500, // 职位数量影响因子 (职位越多，等待越短)
+  },
+  // 页面导航超时
+  navigationTimeout: 30000, // 页面导航超时毫秒数
+};
+
+/**
+ * 更新抓取速度设置
+ * @param {string} speed - 速度模式：'fast', 'normal', 或 'safe'
+ */
+export const updateScrapeSpeed = (speed) => {
+  console.log(`[任务管理器] 更新抓取速度为: ${speed}`);
+  
+  switch (speed) {
+    case 'fast':
+      // 快速模式 - 大幅减少延迟
+      scrapingConfig.pageLoadDelay.min = 20;
+      scrapingConfig.pageLoadDelay.max = 50;
+      scrapingConfig.jobIntervalDelay.min = 50;
+      scrapingConfig.jobIntervalDelay.max = 100;
+      break;
+    
+    case 'normal':
+      // 正常模式 - 默认设置
+      scrapingConfig.pageLoadDelay.min = 100;
+      scrapingConfig.pageLoadDelay.max = 200;
+      scrapingConfig.jobIntervalDelay.min = 200;
+      scrapingConfig.jobIntervalDelay.max = 400;
+      break;
+    
+    case 'safe':
+      // 安全模式 - 增加延迟，降低被封风险
+      scrapingConfig.pageLoadDelay.min = 200;
+      scrapingConfig.pageLoadDelay.max = 400;
+      scrapingConfig.jobIntervalDelay.min = 500;
+      scrapingConfig.jobIntervalDelay.max = 1000;
+      break;
+    
+    default:
+      console.log(`[任务管理器] 未知的速度模式: ${speed}，使用默认设置`);
+      // 默认使用正常模式
+      scrapingConfig.pageLoadDelay.min = 50;
+      scrapingConfig.pageLoadDelay.max = 100;
+      scrapingConfig.jobIntervalDelay.min = 100;
+      scrapingConfig.jobIntervalDelay.max = 200;
+  }
+  
+  console.log(`[任务管理器] 更新后的配置:`, JSON.stringify(scrapingConfig, null, 2));
+};
+
+// 允许通过环境变量调整延迟设置
+if (process.env.SCRAPE_SPEED === 'fast') {
+  updateScrapeSpeed('fast');
+} else if (process.env.SCRAPE_SPEED === 'safe') {
+  updateScrapeSpeed('safe');
+}
 
 // 本地存储文件路径
 const LOCAL_STORAGE_FILE = path.join(process.cwd(), 'data', 'local_jobs.json');
@@ -224,17 +295,16 @@ const saveLocalStorageToFile = () => {
 // 任务配置
 export const taskConfig = {
   keywords: [
-    "nodejs","fullstack","react","web developer",
-    "frontend","javascript", "typescript",
+    "javascript","nodejs","frontend","react",
+    "web developer","fullstack","typescript",
     "vue","angular","nextjs","nuxtjs",
     "svelte","ember.js","extjs",
     "html css", "tailwind", "bootstrap"
   ],
   steps: [
-    // { f_WT: ['2'] },
-    // { f_WT: ['2'], f_SB2: '1' },
+    { f_WT: ['2'] },
+    { f_WT: ['2'], f_SB2: '1' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'] },
-    { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r31536000' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r7776000' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r2592000' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r604800' },
@@ -300,9 +370,14 @@ export const testDbConnection = async () => {
     return false;
   }
 };
-
+let isSaving = false;
 // 尝试保存本地缓存的任务到数据库
 export const saveLocalJobsToDb = async (jobs = null) => {
+  if (isSaving) {
+    console.log('🛑 当前已有保存任务正在执行，取消此次调用');
+    return { success: false, message: '已有任务在执行中', count: 0 };
+  }
+  isSaving = true;
   try {
     // 如果没有提供jobs参数，则使用内部的localJobsStorage
     const jobsToSave = jobs || [...localJobsStorage];
@@ -411,6 +486,8 @@ export const saveLocalJobsToDb = async (jobs = null) => {
     console.error(`[任务管理器] ❌ 保存本地数据到数据库失败:`, error);
     console.error(`[任务管理器] 错误详情:`, error.stack);
     return { success: false, message: error.message, count: 0 };
+  } finally {
+    isSaving = false;
   }
 };
 
@@ -619,6 +696,13 @@ export const resumeTask = async () => {
           geoIndex = progress.geoIndex;
           keywordIndex = progress.keywordIndex;
           step = progress.step;
+          
+          // 添加进度诊断日志
+          console.log(`[任务管理器] 从数据库恢复的进度诊断信息:`);
+          console.log(`[任务管理器] - 数据库中的keywordIndex=${keywordIndex}`);
+          console.log(`[任务管理器] - 数据库中的geoIndex=${geoIndex}`);
+          console.log(`[任务管理器] - 数据库中的step=${step}`);
+          console.log(`[任务管理器] - 当前taskConfig.keywords:`, JSON.stringify(taskConfig.keywords));
         }
       } catch (dbError) {
         console.error('[任务管理器] 恢复任务时获取进度失败:', dbError.message);
@@ -645,6 +729,13 @@ export const resumeTask = async () => {
     // 获取当前关键词和地区ID
     const currentKeyword = allKeywords[keywordIndex];
     const currentGeoId = allGeoIds[geoIndex];
+    
+    // 打印关键词诊断信息
+    console.log(`[任务管理器] 恢复任务时的关键词诊断信息:`);
+    console.log(`[任务管理器] - 当前keywordIndex=${keywordIndex}`);
+    console.log(`[任务管理器] - 计算得到的当前关键词="${currentKeyword}"`);
+    console.log(`[任务管理器] - 当前taskState.keyword="${taskState.keyword}"`);
+    console.log(`[任务管理器] - allKeywords完整列表:`, JSON.stringify(allKeywords));
     
     // 获取地区名称用于日志
     const geoIdToCountry = new Map();
@@ -941,10 +1032,17 @@ async function executeTask() {
           geoIndex = progress.geoIndex;
           keywordIndex = progress.keywordIndex;
           step = progress.step;
+          
+          // 添加进度诊断日志
+          console.log(`[任务管理器] 从数据库恢复的进度诊断信息:`);
+          console.log(`[任务管理器] - 数据库中的keywordIndex=${keywordIndex}`);
+          console.log(`[任务管理器] - 数据库中的geoIndex=${geoIndex}`);
+          console.log(`[任务管理器] - 数据库中的step=${step}`);
+          console.log(`[任务管理器] - 当前taskConfig.keywords:`, JSON.stringify(taskConfig.keywords));
         }
       } catch (dbError) {
-        console.error('[任务管理器] 获取任务进度失败，将从头开始:', dbError.message);
-        // 使用默认值从头开始
+        console.error('[任务管理器] 恢复任务时获取进度失败:', dbError.message);
+        // 继续执行，使用默认值
       }
     }
     
@@ -966,17 +1064,16 @@ async function executeTask() {
       throw new Error('关键词列表为空，请先添加关键词');
     }
     
-    // 导入必要的库
-    const { chromium } = require('playwright');
-    
     // 遍历地区、关键词和步骤
     for (; keywordIndex < taskConfig.keywords.length; keywordIndex++) {
       // 检查任务状态
       await checkInterruption();
   
+      // 获取当前关键词
       const keyword = taskConfig.keywords[keywordIndex];
       console.log(`[任务管理器] 开始处理关键词 "${keyword}" (${keywordIndex+1}/${taskConfig.keywords.length})`);
       updateTaskState({ keyword });
+      console.log(`[任务管理器] 已更新taskState.keyword为"${keyword}"`);
       
       for (; geoIndex < geoIds.length; geoIndex++) {
         // 检查任务状态
@@ -1059,9 +1156,20 @@ async function executeTask() {
             // 构建API URL
             const apiUrl = 'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search';
             
+            // 添加关键词诊断日志
+            console.log(`[任务管理器] 关键词诊断信息:`);
+            console.log(`[任务管理器] - 当前keywordIndex=${keywordIndex}`);
+            console.log(`[任务管理器] - 从taskConfig.keywords获取的当前关键词="${taskConfig.keywords[keywordIndex]}"`);
+            console.log(`[任务管理器] - 当前使用的关键词变量="${keyword}"`);
+            console.log(`[任务管理器] - taskState中的关键词="${taskState.keyword}"`);
+            console.log(`[任务管理器] - taskConfig.keywords完整列表:`, JSON.stringify(taskConfig.keywords));
+            
+            // 重新获取当前关键词(修复)
+            const currentKeyword = taskConfig.keywords[keywordIndex];
+            
             // 构建查询参数
             const queryParams = new URLSearchParams();
-            queryParams.append('keywords', keyword);
+            queryParams.append('keywords', currentKeyword);
             
             // 重要修复：确保使用当前geoIndex对应的geoId
             queryParams.append('geoId', geoId);
@@ -1107,21 +1215,30 @@ async function executeTask() {
                   await page.goto(fullUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
                   pageLoaded = true;
                 } catch (pageError) {
-                  if (pageError.name === 'TimeoutError') {
-                    pageLoadRetries++;
-                    console.log(`[任务管理器] 页面加载超时 (${pageLoadRetries}次)，1分钟后自动重试...`);
+                  pageLoadRetries++;
+                  // 不再区分错误类型，所有错误都进行重试
+                  console.log(`[任务管理器] 页面加载失败 (第${pageLoadRetries}次): ${pageError.message}，1分钟后自动重试...`);
+                  
+                  // 更新任务状态，显示重试信息
+                  updateTaskState({ 
+                    lastError: `页面加载失败: ${pageError.message}，将在1分钟后自动重试 (第${pageLoadRetries}次重试)` 
+                  });
+                  
+                  // 等待30秒后重试
+                  await page.waitForTimeout(30000);
+                  
+                  // 如果连续失败次数达到5次，则视为连续空页面
+                  if (pageLoadRetries >= 5) {
+                    console.log(`[任务管理器] 连续2次页面加载失败，视为空页面`);
+                    consecutiveEmptyPages++;
                     
-                    // 更新任务状态，显示重试信息
-                    updateTaskState({ 
-                      lastError: `页面加载超时，将在1分钟后自动重试 (第${pageLoadRetries}次重试)` 
-                    });
+                    if (consecutiveEmptyPages >= 2) {
+                      console.log(`[任务管理器] 连续 ${consecutiveEmptyPages} 页无数据/加载失败，可能达到列表末尾`);
+                      hasMorePages = false;
+                      break;
+                    }
                     
-                    // 等待1分钟后重试
-                    await page.waitForTimeout(60000);
-                  } else {
-                    // 其他错误直接抛出
-                    console.error(`[任务管理器] 页面加载错误:`, pageError);
-                    throw pageError;
+                    pageLoaded = true; // 强制跳出循环
                   }
                 }
               }
@@ -1231,7 +1348,7 @@ async function executeTask() {
               currentPage++;
               
               // 随机延迟一下再请求下一页
-              await page.waitForTimeout(Math.random() * 1000 + 500);
+              await page.waitForTimeout(Math.random() * 500 + 500);
             }
             
             console.log(`[任务管理器] 总共提取了 ${jobInfos.length} 个职位的基本信息`);
@@ -1252,6 +1369,7 @@ async function executeTask() {
             
             // 保存进度
             try {
+              console.log(`[任务管理器] 保存进度前的关键词信息: keywordIndex=${keywordIndex}, keyword="${keyword}", taskState.keyword="${taskState.keyword}"`);
               await saveTaskProgress(geoIndex, keywordIndex, step);
             } catch (dbError) {
               console.error(`[任务管理器] 保存进度失败:`, dbError.message);
@@ -1282,6 +1400,7 @@ async function executeTask() {
                 try {
                   const job = jobInfos[i];
                   console.log(`[任务管理器] 获取第 ${i+1}/${jobInfos.length} 个职位详情: ${job.title}`);
+                  console.log(`[任务管理器] API URL: ${job.detail_url}`);
                   
                   // 访问详情页
                   try {
@@ -1300,33 +1419,34 @@ async function executeTask() {
                         
                         await page.goto(job.detail_url, { 
                           waitUntil: "domcontentloaded", 
-                          timeout: 30000 // 增加超时时间
+                          timeout: scrapingConfig.navigationTimeout // 使用配置的超时时间
                         });
                         detailPageLoaded = true;
                       } catch (detailError) {
-                        if (detailError.name === 'TimeoutError') {
-                          detailPageRetries++;
-                          console.log(`[任务管理器] 职位详情页加载超时 (${detailPageRetries}次)，1分钟后自动重试...`);
-                          
-                          // 更新任务状态，显示重试信息
-                          updateTaskState({ 
-                            lastError: `职位详情页加载超时，将在1分钟后自动重试 (第${detailPageRetries}次重试)` 
-                          });
-                          
-                          // 等待1分钟后重试
-                          await page.waitForTimeout(60000);
-                        } else {
-                          // 其他错误继续处理下一个职位
-                          console.error(`[任务管理器] 导航到职位详情页失败:`, detailError.message);
-                          detailPageLoaded = true; // 跳出循环
-                          throw detailError; // 向外抛出错误
+                        detailPageRetries++;
+                        // 不再区分错误类型，所有错误都进行重试
+                        console.log(`[任务管理器] 职位详情页加载失败 (第${detailPageRetries}次): ${detailError.message}，1分钟后自动重试...`);
+                        
+                        // 更新任务状态，显示重试信息
+                        updateTaskState({ 
+                          lastError: `职位详情页加载失败: ${detailError.message}，将在1分钟后自动重试 (第${detailPageRetries}次重试)` 
+                        });
+                        
+                        // 等待1分钟后重试
+                        await page.waitForTimeout(30000);
+                        
+                        // 如果重试次数过多，跳过此职位
+                        if (detailPageRetries >= 10) {
+                          console.log(`[任务管理器] 职位详情页加载失败次数过多，跳过此职位`);
+                          detailPageLoaded = true; // 强制跳出循环
                         }
                       }
                     }
                     
                     // 如果达到最大重试次数仍未成功，跳过此职位
                     if (!detailPageLoaded) {
-                      throw new Error(`职位详情页加载失败，已重试${MAX_DETAIL_PAGE_RETRIES}次`);
+                      console.log(`[任务管理器] 职位详情页加载失败，已重试${MAX_DETAIL_PAGE_RETRIES}次，跳过此职位`);
+                      continue; // 跳过此职位，继续处理下一个
                     }
                   } catch (navError) {
                     console.error(`[任务管理器] 导航到职位详情页失败:`, navError.message);
@@ -1336,7 +1456,9 @@ async function executeTask() {
                   // 在获取详情后立即检查任务状态
                   await checkInterruption();
 
-                  await page.waitForTimeout(Math.random() * 200 + 200);
+                  // 使用配置的页面加载延迟
+                  const pageLoadWait = Math.random() * (scrapingConfig.pageLoadDelay.max - scrapingConfig.pageLoadDelay.min) + scrapingConfig.pageLoadDelay.min;
+                  await page.waitForTimeout(pageLoadWait);
                   
                   // 再次检查任务状态，确保即使在处理过程中收到停止命令也能及时响应
                   await checkInterruption();
@@ -1361,7 +1483,8 @@ async function executeTask() {
                       }
                     } catch (e) {}
                   }
-                  
+                  console.log(`[任务管理器] 描述状态: ${description === "未找到描述" ? "未找到描述" : "已找到"}`);
+
                   // 提取申请人数 - 参考search.js的实现
                   let applicantsCount = "未找到";
                   const applicantSelectors = [
@@ -1562,8 +1685,11 @@ async function executeTask() {
                   
                   jobsWithDetails.push(jobWithDetails);
                   
-                  // 避免请求过快
-                  await page.waitForTimeout(Math.random() * 1000 + 500);
+                  // 使用配置的职位间隔延迟
+                  const baseDelay = Math.random() * (scrapingConfig.jobIntervalDelay.max - scrapingConfig.jobIntervalDelay.min) + scrapingConfig.jobIntervalDelay.min;
+                  const factor = Math.max(0.5, 1 - (jobInfos.length / scrapingConfig.jobIntervalDelay.factor));
+                  const smartDelay = Math.floor(baseDelay * factor);
+                  await page.waitForTimeout(smartDelay);
                   
                   // 每个职位处理完成后再检查一次任务状态
                   await checkInterruption();

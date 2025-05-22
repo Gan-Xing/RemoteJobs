@@ -7,3 +7,4 @@ docker-compose.yml
 .gitignore
 *.log
 test
+data
