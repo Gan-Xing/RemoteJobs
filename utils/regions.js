@@ -1,16 +1,7 @@
 export const regions = {
-  northAmerica: {
-    name: '北美',
-    countries: [
-      { name: '美国', geoId: '103644278' },
-      { name: '加拿大', geoId: '101174742' }
-    ]
-  },
   europe: {
     name: '欧洲',
     countries: [
-      { name: '英国', geoId: '101165590' },
-      { name: '德国', geoId: '101282230' },
       { name: '法国', geoId: '105015875' },
       { name: '西班牙', geoId: '105646813' },
       { name: '意大利', geoId: '103350119' },
@@ -38,9 +29,18 @@ export const regions = {
       { name: '中国', geoId: '102890883' }
     ]
   },
+  northAmerica: {
+    name: '北美',
+    countries: [
+      { name: '美国', geoId: '103644278' },
+      { name: '加拿大', geoId: '101174742' }
+    ]
+  },
   other: {
     name: '其他主要国家',
     countries: [
+      { name: '英国', geoId: '101165590' },
+      { name: '德国', geoId: '101282230' },
       // { name: '巴西', geoId: '106057199' },
       // { name: '墨西哥', geoId: '103323778' },
       // { name: '南非', geoId: '104035573' },

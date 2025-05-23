@@ -9,12 +9,12 @@ export default function TaskControl() {
   const [status, setStatus] = useState({ status: "loading", running: false });
   const [scrapeSpeed, setScrapeSpeed] = useState("normal"); // 默认使用正常速度
   const [keywords, setKeywords] = useState([
+    "javascript",
     "nodejs",
-    "fullstack",
+    "frontend",
     "react",
     "web developer",
-    "frontend",
-    "javascript",
+    "fullstack",
     "typescript",
     "vue",
     "angular",
@@ -151,9 +151,9 @@ export default function TaskControl() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           keywords,
-          scrapeSpeed // 发送抓取速度设置
+          scrapeSpeed, // 发送抓取速度设置
         }),
       });
 
@@ -398,7 +398,9 @@ export default function TaskControl() {
       <main className="container mx-auto py-5 px-4 flex flex-col">
         {/* 速度设置选择器 */}
         <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
-          <h2 className="text-lg font-semibold mb-3 text-gray-800">抓取速度设置</h2>
+          <h2 className="text-lg font-semibold mb-3 text-gray-800">
+            抓取速度设置
+          </h2>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setScrapeSpeed("fast")}
@@ -413,7 +415,7 @@ export default function TaskControl() {
                 {scrapeSpeed === "fast" ? "当前选择" : "速度最快，风险较高"}
               </span>
             </button>
-            
+
             <button
               onClick={() => setScrapeSpeed("normal")}
               className={`px-4 py-2 rounded-md ${
@@ -427,7 +429,7 @@ export default function TaskControl() {
                 {scrapeSpeed === "normal" ? "当前选择" : "平衡速度与安全"}
               </span>
             </button>
-            
+
             <button
               onClick={() => setScrapeSpeed("safe")}
               className={`px-4 py-2 rounded-md ${
@@ -443,9 +445,12 @@ export default function TaskControl() {
             </button>
           </div>
           <p className="text-sm text-gray-500 mt-3">
-            {scrapeSpeed === "fast" && "快速模式：每个职位间隔50-100ms，页面加载后等待20-50ms。处理速度最快，但可能增加被LinkedIn限制的风险。"}
-            {scrapeSpeed === "normal" && "正常模式：每个职位间隔100-200ms，页面加载后等待50-100ms。平衡了速度和安全性。"}
-            {scrapeSpeed === "safe" && "安全模式：每个职位间隔500-1000ms，页面加载后等待200-400ms。速度较慢，但更不易被LinkedIn识别为爬虫。"}
+            {scrapeSpeed === "fast" &&
+              "快速模式：每个职位间隔50-100ms，页面加载后等待20-50ms。处理速度最快，但可能增加被LinkedIn限制的风险。"}
+            {scrapeSpeed === "normal" &&
+              "正常模式：每个职位间隔200-400ms，页面加载后等待100-200ms。平衡了速度和安全性。"}
+            {scrapeSpeed === "safe" &&
+              "安全模式：每个职位间隔500-1000ms，页面加载后等待200-400ms。速度较慢，但更不易被LinkedIn识别为爬虫。"}
           </p>
         </div>
 
