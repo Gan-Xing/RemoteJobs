@@ -1,11 +1,9 @@
-import { updateKeywords } from '../../../utils/taskManager';
+import { updateKeywords, taskConfig } from '../../../utils/taskManager';
 
 export default async function handler(req, res) {
   try {
     // 获取关键词
     if (req.method === 'GET') {
-      const { taskConfig } = require('../../../utils/taskManager');
-      
       return res.status(200).json({
         keywords: taskConfig.keywords
       });

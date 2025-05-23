@@ -2,7 +2,6 @@ export const regions = {
   europe: {
     name: '欧洲',
     countries: [
-      { name: '法国', geoId: '105015875' },
       { name: '西班牙', geoId: '105646813' },
       { name: '意大利', geoId: '103350119' },
       { name: '荷兰', geoId: '102890719' },
@@ -41,6 +40,7 @@ export const regions = {
     countries: [
       { name: '英国', geoId: '101165590' },
       { name: '德国', geoId: '101282230' },
+      { name: '法国', geoId: '105015875' },
       // { name: '巴西', geoId: '106057199' },
       // { name: '墨西哥', geoId: '103323778' },
       // { name: '南非', geoId: '104035573' },

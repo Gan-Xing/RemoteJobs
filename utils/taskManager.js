@@ -3,8 +3,6 @@ import { regions } from './regions';
 import fs from 'fs';
 import path from 'path';
 import { chromium } from 'playwright';
-import * as fsPromises from 'fs/promises';
-import { existsSync } from 'fs';
 
 // 爬取延迟配置
 const scrapingConfig = {
@@ -1098,7 +1096,7 @@ async function executeTask() {
           console.log(`[任务管理器] 启动浏览器...`);
           
           try {
-            currentBrowser = await chromium.launch({
+            const browser = await chromium.launch({
               headless: true,
               args: [
                 '--no-sandbox',
@@ -1107,11 +1105,36 @@ async function executeTask() {
                 '--disable-accelerated-2d-canvas',
                 '--disable-gpu',
                 '--window-size=1200,800',
+                '--disable-extensions',
+                '--disable-component-extensions-with-background-pages',
+                '--disable-default-apps',
+                '--mute-audio',
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--disable-background-networking',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-breakpad',
+                '--disable-client-side-phishing-detection',
+                '--disable-features=site-per-process,TranslateUI,BlinkGenPropertyTrees',
+                '--disable-hang-monitor',
+                '--disable-ipc-flooding-protection',
+                '--disable-popup-blocking',
+                '--disable-prompt-on-repost',
+                '--disable-renderer-backgrounding',
+                '--disable-sync',
+                '--force-color-profile=srgb',
+                '--metrics-recording-only',
+                '--no-experiments',
+                '--safebrowsing-disable-auto-update'
               ],
               slowMo: 20,
+              timeout: 60000
             });
             
-            const context = await currentBrowser.newContext({
+            currentBrowser = browser;
+            
+            const context = await browser.newContext({
               viewport: { width: 1200, height: 800 },
               locale: 'en-US',
               geolocation: { longitude: -122.4194, latitude: 37.7749 },
@@ -1801,15 +1824,15 @@ async function executeTask() {
             console.error(`[任务管理器] 创建浏览器实例失败:`, error);
             throw error;
           } finally {
-            // 只有当任务状态不是运行中时才关闭浏览器
-            // 如果任务状态是运行中，让stopTask函数来关闭浏览器
-            if (!taskState.running && currentBrowser) {
+            if (currentBrowser) {
               try {
+                console.log('[任务管理器] 尝试关闭浏览器实例...');
                 await currentBrowser.close();
-                currentBrowser = null;
-                console.log(`[任务管理器] 浏览器已关闭`);
+                console.log('[任务管理器] 浏览器已关闭');
               } catch (e) {
-                console.error(`[任务管理器] 关闭浏览器失败:`, e.message);
+                console.error('[任务管理器] 关闭浏览器失败:', e.message);
+              } finally {
+                currentBrowser = null;
               }
             }
           }
