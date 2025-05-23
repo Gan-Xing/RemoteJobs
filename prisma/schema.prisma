@@ -17,6 +17,7 @@ datasource db {
 model Job {
   id                    String   @id @default(uuid())
   jobId                 String   @unique  // LinkedIn 的职位ID (job_id)
+  refId                 String?  // LinkedIn 的引用ID，用于构造详情URL
   title                 String   // 职位标题
   company               String   // 公司名称
   location              String?  // 地点

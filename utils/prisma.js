@@ -76,6 +76,7 @@ export const saveJobs = async (jobs) => {
           jobFunction: job.job_function || criteria["Job function"] || null,
           industries: job.industries || criteria["Industries"] || null,
           isRemote: typeof job.is_remote === 'boolean' ? job.is_remote : true,
+          refId: job.ref_id || null,
         };
       });
 
@@ -107,43 +108,44 @@ export const saveJobs = async (jobs) => {
         console.log(`[数据库] 开始处理第 ${i+1}/${batches.length} 批次，包含 ${batch.length} 个职位...`);
         
         try {
-        const batchResult = await prisma.$transaction(async (tx) => {
-          const operations = batch.map(job => {
-            return tx.job.upsert({
-              where: {
-                jobId: job.jobId
-              },
-              update: {
-                title: job.title,
-                company: job.company,
-                location: job.location,
-                description: job.description,
-                descriptionFallback: job.descriptionFallback,
-                salary: job.salary,
-                postedAt: job.postedAt,
-                postedText: job.postedText,
-                applicantsCount: job.applicantsCount,
-                seniority: job.seniority,
-                employmentType: job.employmentType,
-                jobFunction: job.jobFunction,
-                industries: job.industries,
-                isRemote: job.isRemote,
-                searchCount: {
-                  increment: 1
-                },
+          const batchResult = await prisma.$transaction(async (tx) => {
+            const operations = batch.map(job => {
+              const updateData = {
+                ...(job.title && { title: job.title }),
+                ...(job.company && { company: job.company }),
+                ...(job.location && { location: job.location }),
+                ...(job.description && job.description !== '未找到描述' && { description: job.description }),
+                ...(job.descriptionFallback && job.descriptionFallback !== '未找到描述' && { descriptionFallback: job.descriptionFallback }),
+                ...(job.salary && job.salary !== '未找到' && { salary: job.salary }),
+                ...(job.postedAt && { postedAt: job.postedAt }),
+                ...(job.postedText && { postedText: job.postedText }),
+                ...(job.applicantsCount && job.applicantsCount !== '未找到' && { applicantsCount: job.applicantsCount }),
+                ...(job.seniority && { seniority: job.seniority }),
+                ...(job.employmentType && { employmentType: job.employmentType }),
+                ...(job.jobFunction && { jobFunction: job.jobFunction }),
+                ...(job.industries && { industries: job.industries }),
+                ...(typeof job.isRemote === 'boolean' && { isRemote: job.isRemote }),
+                ...(job.refId && { refId: job.refId }),
+                searchCount: { increment: 1 },
                 lastSearchedAt: new Date()
-              },
-              create: {
-                ...job,
-                id: generateCustomId(),
-                searchCount: 1,
-                lastSearchedAt: new Date()
-              }
-            });
-          });
+              };
           
-          return await Promise.all(operations);
-        }, {
+              return tx.job.upsert({
+                where: {
+                  jobId: job.jobId
+                },
+                update: updateData,
+                create: {
+                  ...job,
+                  id: generateCustomId(),
+                  searchCount: 1,
+                  lastSearchedAt: new Date()
+                }
+              });
+            });
+          
+            return await Promise.all(operations);
+          }, {
             timeout: 15000 // 增加到15秒超时时间
         });
         
