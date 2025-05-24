@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import KeywordConfigManager from './KeywordConfigManager';
 import CountryConfigManager from './CountryConfigManager';
+import SearchParamsConfigManager from './SearchParamsConfigManager';
 
 const SearchConfigModal = ({ 
   isOpen, 
   onClose, 
   keywordItems = [], 
   countryItems = [], 
+  searchParams = {},
   onSave 
 }) => {
   const [activeTab, setActiveTab] = useState('keywords');
   const [localKeywordItems, setLocalKeywordItems] = useState(keywordItems);
   const [localCountryItems, setLocalCountryItems] = useState(countryItems);
+  const [localSearchParams, setLocalSearchParams] = useState(searchParams);
   const [isSaving, setIsSaving] = useState(false);
 
   // 当弹窗打开时，重置本地状态
@@ -19,15 +22,17 @@ const SearchConfigModal = ({
     if (isOpen) {
       setLocalKeywordItems([...keywordItems]);
       setLocalCountryItems([...countryItems]);
+      setLocalSearchParams({...searchParams});
     }
-  }, [isOpen, keywordItems, countryItems]);
+  }, [isOpen, keywordItems, countryItems, searchParams]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await onSave({
         keywordItems: localKeywordItems,
-        countryItems: localCountryItems
+        countryItems: localCountryItems,
+        searchParams: localSearchParams
       });
       onClose();
     } catch (error) {
@@ -85,6 +90,16 @@ const SearchConfigModal = ({
             >
               国家配置
             </button>
+            <button
+              onClick={() => setActiveTab('searchParams')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === 'searchParams'
+                  ? 'text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              搜索参数
+            </button>
           </div>
         </div>
 
@@ -101,6 +116,13 @@ const SearchConfigModal = ({
             <CountryConfigManager
               countryItems={localCountryItems}
               onUpdate={setLocalCountryItems}
+            />
+          )}
+
+          {activeTab === 'searchParams' && (
+            <SearchParamsConfigManager
+              searchParams={localSearchParams}
+              onUpdate={setLocalSearchParams}
             />
           )}
         </div>

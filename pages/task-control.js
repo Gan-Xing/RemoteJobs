@@ -10,6 +10,11 @@ export default function TaskControl() {
   const [scrapeSpeed, setScrapeSpeed] = useState("normal"); // 默认使用正常速度
   const [keywordItems, setKeywordItems] = useState([]);
   const [countryItems, setCountryItems] = useState([]);
+  const [searchParams, setSearchParams] = useState({
+    resultThreshold: 50,
+    deduplicateBeforeDetail: true,
+    useDeduplicatedCount: true
+  });
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   // 处理任务状态更新
@@ -26,6 +31,11 @@ export default function TaskControl() {
           const data = await res.json();
           setKeywordItems(data.keywordItems || []);
           setCountryItems(data.countryItems || []);
+          setSearchParams(data.searchParams || {
+            resultThreshold: 50,
+            deduplicateBeforeDetail: true,
+            useDeduplicatedCount: true
+          });
         }
       } catch (error) {
         console.error("获取配置失败:", error);
@@ -350,6 +360,7 @@ export default function TaskControl() {
       // 更新本地状态
       setKeywordItems(configData.keywordItems);
       setCountryItems(configData.countryItems);
+      setSearchParams(configData.searchParams);
     } catch (error) {
       console.error("保存配置错误:", error);
       throw error;
@@ -561,6 +572,7 @@ export default function TaskControl() {
           onClose={() => setIsConfigModalOpen(false)}
           keywordItems={keywordItems}
           countryItems={countryItems}
+          searchParams={searchParams}
           onSave={handleConfigSave}
         />
 

@@ -302,7 +302,12 @@ export let taskConfig = {
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r2592000' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r604800' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r86400' }
-  ]
+  ],
+  searchParams: {
+    resultThreshold: 50,
+    deduplicateBeforeDetail: true,
+    useDeduplicatedCount: true
+  }
 };
 
 // 从数据库加载配置
@@ -317,6 +322,12 @@ export const loadTaskConfig = async () => {
     // 获取国家配置
     const countryConfig = await prisma.searchConfig.findFirst({
       where: { configType: 'countries' },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    // 获取搜索参数配置
+    const searchParamsConfig = await prisma.searchConfig.findFirst({
+      where: { configType: 'searchParams' },
       orderBy: { updatedAt: 'desc' }
     });
 
@@ -344,9 +355,18 @@ export const loadTaskConfig = async () => {
       });
     }
 
+    // 更新搜索参数配置
+    if (searchParamsConfig?.configData) {
+      taskConfig.searchParams = {
+        ...taskConfig.searchParams,
+        ...searchParamsConfig.configData
+      };
+    }
+
     console.log('[任务管理器] 已从数据库加载配置');
     console.log('[任务管理器] 启用的关键词:', taskConfig.keywords);
     console.log('[任务管理器] 启用的地区数量:', getAllGeoIds().length);
+    console.log('[任务管理器] 搜索参数配置:', taskConfig.searchParams);
 
     return true;
   } catch (error) {
@@ -1461,7 +1481,8 @@ async function executeTask() {
             updateTaskState({ lastBatchCount: jobInfos.length });
 
             // 在这里进行jobId去重
-            if (jobInfos.length > 0) {
+            const originalJobCount = jobInfos.length; // 保存去重前的数量
+            if (jobInfos.length > 0 && taskConfig.searchParams.deduplicateBeforeDetail) {
               try {
                 const { findExistingJobIds } = require('./prisma');
                 const allJobIds = jobInfos.map(job => job.job_id).filter(Boolean);
@@ -1837,13 +1858,14 @@ async function executeTask() {
             }
             
             // 判断是否需要调整搜索策略
-            if (jobInfos.length >= 50) {
+            const resultCount = taskConfig.searchParams.useDeduplicatedCount ? jobInfos.length : originalJobCount;
+            if (resultCount >= taskConfig.searchParams.resultThreshold) {
               // 结果数量足够，继续下一步
-              console.log(`[任务管理器] 结果数量足够 (${jobInfos.length} >= 50)，继续下一步`);
+              console.log(`[任务管理器] 结果数量足够 (${resultCount} >= ${taskConfig.searchParams.resultThreshold})，继续下一步`);
               // 这里不需要额外操作，自然会进入下一个step
             } else {
               // 结果数量过少，切换到下一个地区
-              console.log(`[任务管理器] 结果数量过少 (${jobInfos.length} < 50)，切换地区`);
+              console.log(`[任务管理器] 结果数量过少 (${resultCount} < ${taskConfig.searchParams.resultThreshold})，切换地区`);
               step = 0; // 重置步骤
               
               // 修复：改为直接更新geoIndex并跳到下一个地区，无需break
