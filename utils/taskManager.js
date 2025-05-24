@@ -979,56 +979,72 @@ const saveCollectedData = async (jobsWithDetails) => {
     return;
   }
 
-  console.log(`[任务管理器] 开始保存已收集的 ${jobsWithDetails.length} 个职位数据...`);
+  console.log(`[任务管理器] 开始处理已收集的 ${jobsWithDetails.length} 个职位数据...`);
 
   try {
-    // 在保存之前处理薪资数据
-    const processedJobs = await Promise.all(jobsWithDetails.map(async (job) => {
-      // 转换薪资为数字
-      let numericSalary = null;
-      let convertedSalary = null;
-      if (job.salary_range) {
-        console.log(`[任务管理器] Converting salary for job ${job.job_id || '(no id)'}: "${job.salary_range}"`);
-        try {
-          convertedSalary = await convertSalaryToUSD(job.salary_range);
-          numericSalary = typeof convertedSalary === 'number' ? convertedSalary : null;
-          console.log(`[任务管理器] Salary for job ${job.job_id || '(no id)'} converted to: ${numericSalary}`);
-        } catch (conversionError) {
-          console.error(`[任务管理器] Error converting salary for job ${job.job_id || '(no id)'} ("${job.salary_range}"):`, conversionError.message);
-          numericSalary = null; // Ensure it's null on error
-        }
-      } else {
-        console.log(`[任务管理器] No salary_range for job ${job.job_id || '(no id)'}, salaryNumeric will be null.`);
-      }
-      return {
-        ...job,
-        salaryNumeric: numericSalary
-      };
-    }));
-
     // 测试数据库连接
     const dbConnected = await testDbConnection();
     
     if (dbConnected) {
-      console.log('[任务管理器] 数据库连接成功，开始保存到数据库...');
+      console.log('[任务管理器] 数据库连接成功，开始检查已存在的职位...');
       try {
+        const { findExistingJobIds } = require('./prisma');
+        // 获取所有jobId
+        const allJobIds = jobsWithDetails.map(job => job.job_id).filter(Boolean);
+        // 查询已存在的jobId
+        const existingJobIds = await findExistingJobIds(allJobIds);
+        console.log(`[任务管理器] 发现 ${existingJobIds.length} 个已存在的职位`);
+        
+        // 过滤出新的职位
+        const newJobs = jobsWithDetails.filter(job => !existingJobIds.includes(job.job_id));
+        console.log(`[任务管理器] 发现 ${newJobs.length} 个新职位需要保存`);
+
+        if (newJobs.length === 0) {
+          console.log('[任务管理器] 没有新的职位需要保存');
+          return;
+        }
+
+        // 在保存之前处理薪资数据
+        const processedJobs = await Promise.all(newJobs.map(async (job) => {
+          // 转换薪资为数字
+          let numericSalary = null;
+          let convertedSalary = null;
+          if (job.salary_range) {
+            console.log(`[任务管理器] Converting salary for job ${job.job_id || '(no id)'}: "${job.salary_range}"`);
+            try {
+              convertedSalary = await convertSalaryToUSD(job.salary_range);
+              numericSalary = typeof convertedSalary === 'number' ? convertedSalary : null;
+              console.log(`[任务管理器] Salary for job ${job.job_id || '(no id)'} converted to: ${numericSalary}`);
+            } catch (conversionError) {
+              console.error(`[任务管理器] Error converting salary for job ${job.job_id || '(no id)'} ("${job.salary_range}"):`, conversionError.message);
+              numericSalary = null;
+            }
+          } else {
+            console.log(`[任务管理器] No salary_range for job ${job.job_id || '(no id)'}, salaryNumeric will be null.`);
+          }
+          return {
+            ...job,
+            salaryNumeric: numericSalary
+          };
+        }));
+
         const { saveJobs } = require('./prisma');
         await saveJobs(processedJobs);
-        console.log(`[任务管理器] ✅ 成功保存 ${processedJobs.length} 个职位到数据库`);
-      } catch (saveDbError) {
-        console.error(`[任务管理器] ❌ 保存到数据库失败:`, saveDbError);
+        console.log(`[任务管理器] ✅ 成功保存 ${processedJobs.length} 个新职位到数据库`);
+      } catch (dbError) {
+        console.error(`[任务管理器] ❌ 数据库操作失败:`, dbError);
         // 保存到本地存储
         console.log('[任务管理器] 尝试保存到本地存储...');
-        localJobsStorage.push(...processedJobs);
+        localJobsStorage.push(...jobsWithDetails);
         saveLocalStorageToFile();
-        console.log(`[任务管理器] ℹ️ 已将 ${processedJobs.length} 个职位保存到本地存储`);
+        console.log(`[任务管理器] ℹ️ 已将 ${jobsWithDetails.length} 个职位保存到本地存储`);
       }
     } else {
       // 数据库连接失败，保存到本地存储
       console.log('[任务管理器] ❌ 数据库连接失败，保存到本地存储');
-      localJobsStorage.push(...processedJobs);
+      localJobsStorage.push(...jobsWithDetails);
       saveLocalStorageToFile();
-      console.log(`[任务管理器] ℹ️ 已将 ${processedJobs.length} 个职位保存到本地存储`);
+      console.log(`[任务管理器] ℹ️ 已将 ${jobsWithDetails.length} 个职位保存到本地存储`);
     }
   } catch (error) {
     console.error('[任务管理器] 保存数据时出错:', error);

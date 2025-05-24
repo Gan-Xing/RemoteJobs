@@ -272,4 +272,25 @@ export const getJobStats = async () => {
     console.error('获取职位统计数据失败:', error);
     throw error;
   }
+};
+
+// 批量查询已存在的jobId
+export const findExistingJobIds = async (jobIds) => {
+  try {
+    const existingJobs = await prisma.job.findMany({
+      where: {
+        jobId: {
+          in: jobIds
+        }
+      },
+      select: {
+        jobId: true
+      }
+    });
+    
+    return existingJobs.map(job => job.jobId);
+  } catch (error) {
+    console.error('[数据库] 查询已存在的jobId时出错:', error);
+    throw error;
+  }
 }; 
