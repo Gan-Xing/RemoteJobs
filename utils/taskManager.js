@@ -291,14 +291,8 @@ const saveLocalStorageToFile = () => {
 };
 
 // 任务配置
-export const taskConfig = {
-  keywords: [
-    "javascript","nodejs","frontend","react",
-    "web developer","fullstack","typescript",
-    "vue","angular","nextjs","nuxtjs",
-    "svelte","ember.js","extjs",
-    "html css", "tailwind", "bootstrap"
-  ],
+export let taskConfig = {
+  keywords: [],
   steps: [
     { f_WT: ['2'] },
     { f_WT: ['2'], f_SB2: '1' },
@@ -308,6 +302,56 @@ export const taskConfig = {
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r604800' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r86400' }
   ]
+};
+
+// 从数据库加载配置
+export const loadTaskConfig = async () => {
+  try {
+    // 获取关键词配置
+    const keywordConfig = await prisma.searchConfig.findFirst({
+      where: { configType: 'keywords' },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    // 获取国家配置
+    const countryConfig = await prisma.searchConfig.findFirst({
+      where: { configType: 'countries' },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    // 更新关键词列表
+    if (keywordConfig?.configData?.keywordItems) {
+      // 只获取启用的关键词
+      taskConfig.keywords = keywordConfig.configData.keywordItems
+        .filter(item => item.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map(item => item.keyword);
+    }
+
+    // 更新地区列表
+    if (countryConfig?.configData?.countryItems) {
+      // 只获取启用的国家
+      const enabledCountries = countryConfig.configData.countryItems
+        .filter(item => item.enabled)
+        .sort((a, b) => a.order - b.order);
+
+      // 更新regions对象
+      Object.keys(regions).forEach(regionKey => {
+        regions[regionKey].countries = regions[regionKey].countries.filter(country => 
+          enabledCountries.some(enabled => enabled.geoId === country.geoId)
+        );
+      });
+    }
+
+    console.log('[任务管理器] 已从数据库加载配置');
+    console.log('[任务管理器] 启用的关键词:', taskConfig.keywords);
+    console.log('[任务管理器] 启用的地区数量:', getAllGeoIds().length);
+
+    return true;
+  } catch (error) {
+    console.error('[任务管理器] 加载配置失败:', error);
+    return false;
+  }
 };
 
 // 获取所有geoId
@@ -579,6 +623,12 @@ const stopElapsedTimer = () => {
 // 开始任务
 export const startTask = async () => {
   try {
+    // 先加载配置
+    const configLoaded = await loadTaskConfig();
+    if (!configLoaded) {
+      throw new Error('加载任务配置失败');
+    }
+
     // 获取初始关键词和地区ID
     const allKeywords = taskConfig.keywords;
     const allGeoIds = getAllGeoIds();

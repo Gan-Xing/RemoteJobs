@@ -1,4 +1,4 @@
-import { startTask, updateScrapeSpeed } from '../../../utils/taskManager';
+import { startTask, updateScrapeSpeed, loadTaskConfig } from '../../../utils/taskManager';
 
 export default async function handler(req, res) {
   try {
@@ -16,6 +16,17 @@ export default async function handler(req, res) {
       console.log(`[API] 设置抓取速度为: ${scrapeSpeed}`);
       // 将抓取速度设置应用到任务管理器
       updateScrapeSpeed(scrapeSpeed);
+    }
+    
+    // 先加载配置
+    console.log('[API] 加载任务配置...');
+    const configLoaded = await loadTaskConfig();
+    if (!configLoaded) {
+      console.log('[API] 加载配置失败');
+      return res.status(500).json({ 
+        error: '加载任务配置失败',
+        success: false 
+      });
     }
     
     console.log('[API] 调用startTask()开始任务...');
