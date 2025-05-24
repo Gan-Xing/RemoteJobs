@@ -1,13 +1,13 @@
 {
-  "running": false,
-  "status": "stopped",
-  "geoId": "103644278",
+  "running": true,
+  "status": "running",
+  "geoId": "105646813",
   "keyword": "javascript",
   "step": 0,
   "geoIndex": 0,
   "keywordIndex": 0,
-  "startedAt": null,
-  "elapsedSec": 0,
+  "startedAt": "2025-05-24T09:38:49.848Z",
+  "elapsedSec": 2,
   "lastBatchCount": 0,
   "lastError": null
 }

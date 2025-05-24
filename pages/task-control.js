@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import TaskStatus from "../components/TaskStatus";
 import TaskControls from "../components/TaskControls";
-import KeywordManager from "../components/KeywordManager";
+import EnhancedKeywordManager from "../components/EnhancedKeywordManager";
 import LocalStorageMonitor from "../components/LocalStorageMonitor";
 
 export default function TaskControl() {
@@ -27,6 +27,7 @@ export default function TaskControl() {
     "tailwind",
     "bootstrap",
   ]);
+  const [selectedKeywords, setSelectedKeywords] = useState([]);
 
   // 处理任务状态更新
   const handleStatusChange = (newStatus) => {
@@ -43,10 +44,14 @@ export default function TaskControl() {
           const data = await res.json();
           if (Array.isArray(data.keywords)) {
             setKeywords(data.keywords);
+            // 默认选择所有关键词
+            setSelectedKeywords(data.keywords);
           }
         }
       } catch (error) {
         console.error("获取关键词失败:", error);
+        // 如果获取失败，默认选择所有预设关键词
+        setSelectedKeywords([...keywords]);
       }
     };
 
@@ -134,6 +139,12 @@ export default function TaskControl() {
 
   const handleStart = async () => {
     try {
+      // 验证是否选择了关键词
+      if (selectedKeywords.length === 0) {
+        alert("请至少选择一个关键词进行抓取");
+        return;
+      }
+
       console.log("发送启动任务请求...");
 
       // 立即更新状态，不等待响应
@@ -152,7 +163,7 @@ export default function TaskControl() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          keywords,
+          keywords: selectedKeywords, // 只发送选中的关键词
           scrapeSpeed, // 发送抓取速度设置
         }),
       });
@@ -351,9 +362,17 @@ export default function TaskControl() {
       }
 
       setKeywords(newKeywords);
+      
+      // 更新选中状态，保留仍然存在的关键词的选中状态
+      const newSelected = selectedKeywords.filter(keyword => newKeywords.includes(keyword));
+      setSelectedKeywords(newSelected);
     } catch (error) {
       console.error("更新关键词错误:", error);
     }
+  };
+
+  const handleKeywordSelectionChange = (newSelectedKeywords) => {
+    setSelectedKeywords(newSelectedKeywords);
   };
 
   return (
@@ -369,17 +388,22 @@ export default function TaskControl() {
             <h1 className="text-2xl font-bold text-indigo-600">
               远程岗位抓取任务控制
             </h1>
-            <div
-              className={`px-3 py-1 inline-block rounded-full text-sm font-medium ${
-                status.running
-                  ? "bg-green-100 text-green-800 border border-green-200"
-                  : status.status === "paused"
-                  ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                  : "bg-gray-100 text-gray-800 border border-gray-200"
-              }`}
-            >
-              任务状态: <span className="font-bold">{status.status}</span>
-              {status.running && <span className="ml-1 animate-pulse">●</span>}
+            <div className="flex gap-2">
+              <div
+                className={`px-3 py-1 inline-block rounded-full text-sm font-medium ${
+                  status.running
+                    ? "bg-green-100 text-green-800 border border-green-200"
+                    : status.status === "paused"
+                    ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                    : "bg-gray-100 text-gray-800 border border-gray-200"
+                }`}
+              >
+                任务状态: <span className="font-bold">{status.status}</span>
+                {status.running && <span className="ml-1 animate-pulse">●</span>}
+              </div>
+              <div className="px-3 py-1 inline-block rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                关键词: <span className="font-bold">{selectedKeywords.length}/{keywords.length}</span> 已启用
+              </div>
             </div>
           </div>
           {/* 任务控制卡片 */}
@@ -458,61 +482,22 @@ export default function TaskControl() {
         <TaskStatus status={status} onStatusChange={handleStatusChange} />
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* 左列：任务状态和控制 */}
-          <div className="lg:w-1/2 space-y-8">
-            {/* 关键词输入区域 */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 mr-2 text-purple-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                  />
-                </svg>
-                关键词设置
-              </h2>
-              {/* 使用简单文本框替代不存在的组件 */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  输入关键词（用逗号分隔）
-                </label>
-                <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  rows="2"
-                  value={keywords.join(", ")}
-                  onChange={(e) =>
-                    setKeywords(e.target.value.split(",").map((k) => k.trim()))
-                  }
-                ></textarea>
-                <div className="mt-2 text-xs text-gray-500">
-                  已设置 {keywords.length} 个关键词
-                </div>
-              </div>
-            </div>
-
+          {/* 左列：本地存储监控 */}
+          <div className="lg:w-1/3 space-y-8">
             {/* 本地存储监控 */}
             <LocalStorageMonitor />
           </div>
 
           {/* 右列：关键词管理 */}
-          <div className="lg:w-1/2 flex flex-col h-full space-y-8">
-            {/* 关键词管理区域 */}
+          <div className="lg:w-2/3 flex flex-col h-full space-y-8">
+            {/* 增强版关键词管理区域 */}
             <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col flex-grow">
-              <h2 className="text-xl font-semibold mb-4">关键词管理</h2>
-              <div className="flex-grow overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 h-[23rem]">
-                <KeywordManager
-                  keywords={keywords}
-                  onUpdate={handleKeywordsUpdate}
-                />
-              </div>
+              <EnhancedKeywordManager
+                keywords={keywords}
+                selectedKeywords={selectedKeywords}
+                onUpdate={handleKeywordsUpdate}
+                onSelectionChange={handleKeywordSelectionChange}
+              />
             </div>
           </div>
         </div>
