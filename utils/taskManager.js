@@ -1265,6 +1265,14 @@ async function executeTask() {
             // 重新获取当前关键词(修复)
             const currentKeyword = taskConfig.keywords[keywordIndex];
             
+            // 添加关键词诊断日志
+            console.log(`[任务管理器] 关键词诊断信息:`);
+            console.log(`[任务管理器] - 当前keywordIndex=${keywordIndex}`);
+            console.log(`[任务管理器] - 从taskConfig.keywords获取的当前关键词="${taskConfig.keywords[keywordIndex]}"`);
+            console.log(`[任务管理器] - 当前使用的关键词变量="${currentKeyword}"`);
+            console.log(`[任务管理器] - taskState中的关键词="${taskState.keyword}"`);
+            console.log(`[任务管理器] - taskConfig.keywords完整列表:`, JSON.stringify(taskConfig.keywords));
+            
             // 构建查询参数
             const queryParams = new URLSearchParams();
             queryParams.append('keywords', currentKeyword);
