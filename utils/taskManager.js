@@ -3,6 +3,7 @@ import { regions } from './regions';
 import fs from 'fs';
 import path from 'path';
 import { chromium } from 'playwright';
+import { convertSalaryToUSD } from './salaryConverter';
 
 // 爬取延迟配置
 const scrapingConfig = {
@@ -981,6 +982,30 @@ const saveCollectedData = async (jobsWithDetails) => {
   console.log(`[任务管理器] 开始保存已收集的 ${jobsWithDetails.length} 个职位数据...`);
 
   try {
+    // 在保存之前处理薪资数据
+    const processedJobs = await Promise.all(jobsWithDetails.map(async (job) => {
+      // 转换薪资为数字
+      let numericSalary = null;
+      let convertedSalary = null;
+      if (job.salary_range) {
+        console.log(`[任务管理器] Converting salary for job ${job.job_id || '(no id)'}: "${job.salary_range}"`);
+        try {
+          convertedSalary = await convertSalaryToUSD(job.salary_range);
+          numericSalary = typeof convertedSalary === 'number' ? convertedSalary : null;
+          console.log(`[任务管理器] Salary for job ${job.job_id || '(no id)'} converted to: ${numericSalary}`);
+        } catch (conversionError) {
+          console.error(`[任务管理器] Error converting salary for job ${job.job_id || '(no id)'} ("${job.salary_range}"):`, conversionError.message);
+          numericSalary = null; // Ensure it's null on error
+        }
+      } else {
+        console.log(`[任务管理器] No salary_range for job ${job.job_id || '(no id)'}, salaryNumeric will be null.`);
+      }
+      return {
+        ...job,
+        salaryNumeric: numericSalary
+      };
+    }));
+
     // 测试数据库连接
     const dbConnected = await testDbConnection();
     
@@ -988,22 +1013,22 @@ const saveCollectedData = async (jobsWithDetails) => {
       console.log('[任务管理器] 数据库连接成功，开始保存到数据库...');
       try {
         const { saveJobs } = require('./prisma');
-        await saveJobs(jobsWithDetails);
-        console.log(`[任务管理器] ✅ 成功保存 ${jobsWithDetails.length} 个职位到数据库`);
+        await saveJobs(processedJobs);
+        console.log(`[任务管理器] ✅ 成功保存 ${processedJobs.length} 个职位到数据库`);
       } catch (saveDbError) {
         console.error(`[任务管理器] ❌ 保存到数据库失败:`, saveDbError);
         // 保存到本地存储
         console.log('[任务管理器] 尝试保存到本地存储...');
-        localJobsStorage.push(...jobsWithDetails);
+        localJobsStorage.push(...processedJobs);
         saveLocalStorageToFile();
-        console.log(`[任务管理器] ℹ️ 已将 ${jobsWithDetails.length} 个职位保存到本地存储`);
+        console.log(`[任务管理器] ℹ️ 已将 ${processedJobs.length} 个职位保存到本地存储`);
       }
     } else {
       // 数据库连接失败，保存到本地存储
       console.log('[任务管理器] ❌ 数据库连接失败，保存到本地存储');
-      localJobsStorage.push(...jobsWithDetails);
+      localJobsStorage.push(...processedJobs);
       saveLocalStorageToFile();
-      console.log(`[任务管理器] ℹ️ 已将 ${jobsWithDetails.length} 个职位保存到本地存储`);
+      console.log(`[任务管理器] ℹ️ 已将 ${processedJobs.length} 个职位保存到本地存储`);
     }
   } catch (error) {
     console.error('[任务管理器] 保存数据时出错:', error);

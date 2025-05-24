@@ -67,3 +67,14 @@ model SearchConfig {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+// 汇率模型
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  rates     Json     // 存储汇率数据的JSON对象
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
