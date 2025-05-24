@@ -988,17 +988,17 @@ const saveCollectedData = async (jobsWithDetails) => {
       let numericSalary = null;
       let convertedSalary = null;
       if (job.salary_range) {
-        console.log(`[任务管理器] Converting salary for job ${job.job_id || '(no id)'}: "${job.salary_range}"`);
+        console.log(`[任务管理器] 正在转换职位 ${job.job_id || '(无ID)'} 的薪资: "${job.salary_range}"`);
         try {
           convertedSalary = await convertSalaryToUSD(job.salary_range);
           numericSalary = typeof convertedSalary === 'number' ? convertedSalary : null;
-          console.log(`[任务管理器] Salary for job ${job.job_id || '(no id)'} converted to: ${numericSalary}`);
+          console.log(`[任务管理器] 职位 ${job.job_id || '(无ID)'} 的薪资已转换为: ${numericSalary}`);
         } catch (conversionError) {
-          console.error(`[任务管理器] Error converting salary for job ${job.job_id || '(no id)'} ("${job.salary_range}"):`, conversionError.message);
-          numericSalary = null; // Ensure it's null on error
+          console.error(`[任务管理器] 转换职位 ${job.job_id || '(无ID)'} 的薪资时出错 ("${job.salary_range}"):`, conversionError.message);
+          numericSalary = null; // 确保错误时为 null
         }
       } else {
-        console.log(`[任务管理器] No salary_range for job ${job.job_id || '(no id)'}, salaryNumeric will be null.`);
+        console.log(`[任务管理器] 职位 ${job.job_id || '(无ID)'} 没有薪资范围，salaryNumeric 将为 null`);
       }
       return {
         ...job,

@@ -17,7 +17,7 @@ async function getExchangeRates() {
 
   // ✅ 1. 检查缓存是否存在并在有效期内
   if (exchangeRateCache.rates && exchangeRateCache.expiry && now < exchangeRateCache.expiry) {
-    console.log('[salaryConverter] Using cached exchange rates');
+    console.log('[salaryConverter] 使用缓存的汇率');
     return exchangeRateCache.rates;
   }
 
@@ -39,7 +39,7 @@ async function getExchangeRates() {
     });
 
     if (todayRates) {
-      console.log('[salaryConverter] Using today\'s rates from database:', todayRates.rates);
+      console.log('[salaryConverter] 使用数据库中今天的汇率:', todayRates.rates);
 
       // ✅ 更新缓存
       exchangeRateCache = {
@@ -51,7 +51,7 @@ async function getExchangeRates() {
     }
 
     // 3. 如果数据库没有今天的汇率，调用 API
-    console.log('[salaryConverter] No rates found for today, fetching from API...');
+    console.log('[salaryConverter] 未找到今天的汇率，从 API 获取...');
     const response = await axios.get('https://api.exchangerate-api.com/v4/latest/USD');
 
     if (response?.data?.rates && Object.keys(response.data.rates).length > 0) {
@@ -66,7 +66,7 @@ async function getExchangeRates() {
         },
       });
 
-      console.log('[salaryConverter] Successfully saved new rates to database:', rates);
+      console.log('[salaryConverter] 成功将新汇率保存到数据库:', rates);
 
       // ✅ 更新缓存
       exchangeRateCache = {
@@ -76,10 +76,10 @@ async function getExchangeRates() {
 
       return rates;
     } else {
-      throw new Error('Invalid rates data received from API');
+      throw new Error('从 API 接收到的汇率数据无效');
     }
   } catch (error) {
-    console.error('[salaryConverter] Failed to fetch or validate exchange rates:', error.message);
+    console.error('[salaryConverter] 获取或验证汇率失败:', error.message);
 
     try {
       // 4. 从数据库中获取最近有效的一条
@@ -90,7 +90,7 @@ async function getExchangeRates() {
       });
 
       if (lastValidRates) {
-        console.log('[salaryConverter] Using last valid rates from database:', lastValidRates.rates);
+        console.log('[salaryConverter] 使用数据库中最近的有效汇率:', lastValidRates.rates);
 
         // ✅ 更新缓存
         exchangeRateCache = {
@@ -101,7 +101,7 @@ async function getExchangeRates() {
         return lastValidRates.rates;
       }
     } catch (dbError) {
-      console.error('[salaryConverter] Failed to get last valid rates from database:', dbError.message);
+      console.error('[salaryConverter] 从数据库获取最近有效汇率失败:', dbError.message);
     }
 
     // 5. 使用默认汇率
@@ -125,9 +125,9 @@ async function getExchangeRates() {
         },
       });
 
-      console.log('[salaryConverter] Saved default rates to database');
+      console.log('[salaryConverter] 已将默认汇率保存到数据库');
     } catch (dbError) {
-      console.error('[salaryConverter] Failed to save default rates to database:', dbError.message);
+      console.error('[salaryConverter] 保存默认汇率到数据库失败:', dbError.message);
     }
 
     // ✅ 更新缓存
