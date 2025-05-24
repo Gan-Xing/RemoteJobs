@@ -89,7 +89,7 @@ const TaskControls = ({ status, onStart, onPause, onResume, onStop }) => {
         </div>
       )}
       
-      <div className="flex space-x-4 mb-2">
+      <div className="flex justify-end space-x-4 mb-2">
         {buttonState.showStart && (
           <button
             onClick={handleStart}

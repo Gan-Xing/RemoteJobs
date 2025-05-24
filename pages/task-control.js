@@ -364,12 +364,12 @@ export default function TaskControl() {
       </Head>
 
       <header className="bg-white shadow-sm py-5">
-        <div className="container mx-auto px-4 flex justify-between items-center">
-          <div className="flex center items-center gap-4">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <h1 className="text-2xl font-bold text-indigo-600">
               远程岗位抓取任务控制
             </h1>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <div
                 className={`px-3 py-1 inline-block rounded-full text-sm font-medium ${
                   status.running
@@ -391,7 +391,7 @@ export default function TaskControl() {
             </div>
           </div>
           {/* 任务控制卡片 */}
-          <div>
+          <div className="mt-4">
             <TaskControls
               status={status}
               onStart={handleStart}
@@ -404,142 +404,154 @@ export default function TaskControl() {
       </header>
 
       <main className="container mx-auto py-5 px-4 flex flex-col">
-        {/* 速度设置选择器 */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
-          <h2 className="text-lg font-semibold mb-3 text-gray-800">
-            抓取速度设置
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setScrapeSpeed("fast")}
-              className={`px-4 py-2 rounded-md ${
-                scrapeSpeed === "fast"
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              快速模式
-              <span className="block text-xs mt-1">
-                {scrapeSpeed === "fast" ? "当前选择" : "速度最快，风险较高"}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setScrapeSpeed("normal")}
-              className={`px-4 py-2 rounded-md ${
-                scrapeSpeed === "normal"
-                  ? "bg-green-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              正常模式
-              <span className="block text-xs mt-1">
-                {scrapeSpeed === "normal" ? "当前选择" : "平衡速度与安全"}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setScrapeSpeed("safe")}
-              className={`px-4 py-2 rounded-md ${
-                scrapeSpeed === "safe"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              安全模式
-              <span className="block text-xs mt-1">
-                {scrapeSpeed === "safe" ? "当前选择" : "速度最慢，最不易被封"}
-              </span>
-            </button>
+        {/* 第一行：任务状态和搜索配置 */}
+        <div className="mb-6 flex flex-col lg:flex-row gap-6">
+          {/* 任务状态显示区域 */}
+          <div className="lg:w-1/2 bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-600">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+              <h3 className="text-lg font-semibold text-gray-800">任务状态</h3>
+            </div>
+            <TaskStatus status={status} onStatusChange={handleStatusChange} />
           </div>
-          <p className="text-sm text-gray-500 mt-3">
-            {scrapeSpeed === "fast" &&
-              "快速模式：每个职位间隔50-100ms，页面加载后等待20-50ms。处理速度最快，但可能增加被LinkedIn限制的风险。"}
-            {scrapeSpeed === "normal" &&
-              "正常模式：每个职位间隔200-400ms，页面加载后等待100-200ms。平衡了速度和安全性。"}
-            {scrapeSpeed === "safe" &&
-              "安全模式：每个职位间隔500-1000ms，页面加载后等待200-400ms。速度较慢，但更不易被LinkedIn识别为爬虫。"}
-          </p>
-        </div>
 
-        {/* 搜索配置按钮 */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-semibold mb-2 text-gray-800">搜索配置</h2>
-              <p className="text-sm text-gray-600">
-                配置关键词和国家/地区，系统将按照您的设置进行职位搜索
+          {/* 搜索配置 */}
+          <div className="lg:w-1/2 bg-white rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-600">
+                  <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-800">搜索配置</h3>
+              </div>
+              <button
+                onClick={() => setIsConfigModalOpen(true)}
+                className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="m12 1 0 6m0 6 0 6m11-7-6 0m-6 0-6 0"/>
+                </svg>
+                配置搜索参数
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">已启用关键词 ({keywordItems.filter(item => item.enabled).length}个)</h4>
+                <div className="flex flex-wrap gap-2">
+                  {keywordItems.filter(item => item.enabled).slice(0, 5).map((item) => (
+                    <span key={item.id} className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">
+                      {item.order}. {item.keyword}
+                    </span>
+                  ))}
+                  {keywordItems.filter(item => item.enabled).length > 5 && (
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                      +{keywordItems.filter(item => item.enabled).length - 5} 更多...
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">已启用国家 ({countryItems.filter(item => item.enabled).length}个)</h4>
+                <div className="flex flex-wrap gap-2">
+                  {countryItems.filter(item => item.enabled).slice(0, 5).map((item) => (
+                    <span key={item.id} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                      {item.order}. {item.name}
+                    </span>
+                  ))}
+                  {countryItems.filter(item => item.enabled).length > 5 && (
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                      +{countryItems.filter(item => item.enabled).length - 5} 更多...
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 点击"配置搜索参数"按钮可以调整关键词和国家的启用状态及优先级顺序
               </p>
             </div>
-            <button
-              onClick={() => setIsConfigModalOpen(true)}
-              className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="m12 1 0 6m0 6 0 6m11-7-6 0m-6 0-6 0"/>
-              </svg>
-              配置搜索参数
-            </button>
           </div>
         </div>
 
-        {/* 状态显示区域 */}
-        <TaskStatus status={status} onStatusChange={handleStatusChange} />
+        {/* 第二行：抓取速度设置和本地数据监控 */}
+        <div className="mb-6 flex flex-col lg:flex-row gap-6">
+          {/* 速度设置选择器 */}
+          <div className="lg:w-1/2 bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-600">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <h2 className="text-lg font-semibold text-gray-800">抓取速度设置</h2>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <button
+                onClick={() => setScrapeSpeed("fast")}
+                className={`flex flex-col items-center p-4 rounded-lg transition-colors ${
+                  scrapeSpeed === "fast"
+                    ? "bg-red-500 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                <span className="font-medium">快速模式</span>
+                <span className="text-xs mt-1">
+                  {scrapeSpeed === "fast" ? "当前选择" : "速度最快，风险较高"}
+                </span>
+              </button>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* 左列：本地存储监控 */}
-          <div className="lg:w-1/2 space-y-8">
-            {/* 本地存储监控 */}
-            <LocalStorageMonitor />
+              <button
+                onClick={() => setScrapeSpeed("normal")}
+                className={`flex flex-col items-center p-4 rounded-lg transition-colors ${
+                  scrapeSpeed === "normal"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                <span className="font-medium">正常模式</span>
+                <span className="text-xs mt-1">
+                  {scrapeSpeed === "normal" ? "当前选择" : "平衡速度与安全"}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setScrapeSpeed("safe")}
+                className={`flex flex-col items-center p-4 rounded-lg transition-colors ${
+                  scrapeSpeed === "safe"
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                <span className="font-medium">安全模式</span>
+                <span className="text-xs mt-1">
+                  {scrapeSpeed === "safe" ? "当前选择" : "速度最慢，最不易被封"}
+                </span>
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mt-4">
+              {scrapeSpeed === "fast" &&
+                "快速模式：每个职位间隔50-100ms，页面加载后等待20-50ms。处理速度最快，但可能增加被LinkedIn限制的风险。"}
+              {scrapeSpeed === "normal" &&
+                "正常模式：每个职位间隔200-400ms，页面加载后等待100-200ms。平衡了速度和安全性。"}
+              {scrapeSpeed === "safe" &&
+                "安全模式：每个职位间隔500-1000ms，页面加载后等待200-400ms。速度较慢，但更不易被LinkedIn识别为爬虫。"}
+            </p>
           </div>
 
-          {/* 右列：配置概览 */}
-          <div className="lg:w-1/2 flex flex-col h-full space-y-8">
-            {/* 配置概览 */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">当前配置概览</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">已启用关键词 ({keywordItems.filter(item => item.enabled).length}个)</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {keywordItems.filter(item => item.enabled).slice(0, 8).map((item) => (
-                      <span key={item.id} className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">
-                        {item.order}. {item.keyword}
-                      </span>
-                    ))}
-                    {keywordItems.filter(item => item.enabled).length > 8 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                        +{keywordItems.filter(item => item.enabled).length - 8} 更多...
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">已启用国家 ({countryItems.filter(item => item.enabled).length}个)</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {countryItems.filter(item => item.enabled).slice(0, 6).map((item) => (
-                      <span key={item.id} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-                        {item.order}. {item.name}
-                      </span>
-                    ))}
-                    {countryItems.filter(item => item.enabled).length > 6 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                        +{countryItems.filter(item => item.enabled).length - 6} 更多...
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-700">
-                  💡 点击"配置搜索参数"按钮可以调整关键词和国家的启用状态及优先级顺序
-                </p>
-              </div>
+          {/* 本地存储监控 */}
+          <div className="lg:w-1/2 bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-600">
+                <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+              </svg>
+              <h2 className="text-lg font-semibold text-gray-800">本地数据监控</h2>
             </div>
+            <LocalStorageMonitor />
           </div>
         </div>
 
