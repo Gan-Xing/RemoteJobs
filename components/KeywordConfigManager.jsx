@@ -19,9 +19,9 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 // 单个关键词项组件
-const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, id }) => {
+const SortableKeywordItem = ({ keywordItem, onToggle, onEdit, onDelete, onPin }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(keyword);
+  const [editValue, setEditValue] = useState(keywordItem.keyword);
 
   const {
     attributes,
@@ -30,7 +30,7 @@ const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id: keywordItem.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -39,8 +39,8 @@ const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, 
   };
 
   const handleSaveEdit = () => {
-    if (editValue.trim() && editValue !== keyword) {
-      onEdit(id, editValue.trim());
+    if (editValue.trim() && editValue !== keywordItem.keyword) {
+      onEdit(keywordItem.id, editValue.trim());
     }
     setIsEditing(false);
   };
@@ -49,7 +49,7 @@ const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, 
     if (e.key === 'Enter') {
       handleSaveEdit();
     } else if (e.key === 'Escape') {
-      setEditValue(keyword);
+      setEditValue(keywordItem.keyword);
       setIsEditing(false);
     }
   };
@@ -59,11 +59,16 @@ const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, 
       ref={setNodeRef}
       style={style}
       className={`flex items-center p-3 border rounded-lg transition-all duration-200 ${
-        isSelected 
+        keywordItem.enabled 
           ? 'border-indigo-300 bg-indigo-50 shadow-sm' 
           : 'border-gray-200 bg-white hover:bg-gray-50'
       } ${isDragging ? 'shadow-lg' : ''}`}
     >
+      {/* 顺序显示 */}
+      <div className="mr-3 text-xs text-gray-500 font-mono w-6 text-center">
+        {keywordItem.order}
+      </div>
+
       {/* 拖拽手柄 */}
       <div 
         {...attributes} 
@@ -78,8 +83,8 @@ const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, 
       {/* 选择框 */}
       <input
         type="checkbox"
-        checked={isSelected}
-        onChange={() => onToggle(id)}
+        checked={keywordItem.enabled}
+        onChange={() => onToggle(keywordItem.id)}
         className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-3"
       />
 
@@ -97,16 +102,30 @@ const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, 
           />
         ) : (
           <span 
-            className={`text-sm ${isSelected ? 'text-indigo-800 font-medium' : 'text-gray-700'}`}
+            className={`text-sm ${keywordItem.enabled ? 'text-indigo-800 font-medium' : 'text-gray-700'}`}
             onDoubleClick={() => setIsEditing(true)}
           >
-            {keyword}
+            {keywordItem.keyword}
           </span>
         )}
       </div>
 
       {/* 操作按钮 */}
       <div className="flex space-x-1 ml-3">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPin(keywordItem.id);
+          }}
+          className={`p-1.5 rounded transition-colors ${
+            keywordItem.pinned ? 'text-indigo-600 hover:bg-indigo-50' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'
+          }`}
+          title="置顶"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 19V5M5 12l7-7 7 7"/>
+          </svg>
+        </button>
         <button
           onClick={() => setIsEditing(true)}
           className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
@@ -118,7 +137,7 @@ const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, 
           </svg>
         </button>
         <button
-          onClick={() => onDelete(id)}
+          onClick={() => onDelete(keywordItem.id)}
           className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
           title="删除"
         >
@@ -134,7 +153,7 @@ const SortableKeywordItem = ({ keyword, isSelected, onToggle, onEdit, onDelete, 
   );
 };
 
-const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onSelectionChange }) => {
+const KeywordConfigManager = ({ keywordItems = [], onUpdate }) => {
   const [newKeyword, setNewKeyword] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -145,67 +164,65 @@ const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onS
     })
   );
 
-  // 创建带ID的关键词列表
-  const keywordsWithIds = keywords.map((keyword, index) => ({
-    id: `keyword-${index}`,
-    keyword,
-    originalIndex: index
-  }));
+  // 按order排序的关键词列表
+  const sortedKeywords = [...keywordItems].sort((a, b) => a.order - b.order);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
 
     if (active.id !== over?.id) {
-      const oldIndex = keywordsWithIds.findIndex(item => item.id === active.id);
-      const newIndex = keywordsWithIds.findIndex(item => item.id === over.id);
+      const oldIndex = sortedKeywords.findIndex(item => item.id === active.id);
+      const newIndex = sortedKeywords.findIndex(item => item.id === over.id);
       
-      const newKeywords = arrayMove(keywords, oldIndex, newIndex);
-      onUpdate(newKeywords);
+      const reorderedKeywords = arrayMove(sortedKeywords, oldIndex, newIndex);
+      
+      // 重新分配order值
+      const updatedKeywords = reorderedKeywords.map((item, index) => ({
+        ...item,
+        order: index + 1
+      }));
+      
+      onUpdate(updatedKeywords);
     }
   };
 
   const handleToggleKeyword = (keywordId) => {
-    const keyword = keywordsWithIds.find(item => item.id === keywordId);
-    if (!keyword) return;
-
-    const newSelected = selectedKeywords.includes(keyword.keyword)
-      ? selectedKeywords.filter(k => k !== keyword.keyword)
-      : [...selectedKeywords, keyword.keyword];
-    
-    onSelectionChange(newSelected);
+    const updatedKeywords = keywordItems.map(item => 
+      item.id === keywordId 
+        ? { ...item, enabled: !item.enabled }
+        : item
+    );
+    onUpdate(updatedKeywords);
   };
 
   const handleEditKeyword = (keywordId, newValue) => {
-    const itemIndex = keywordsWithIds.findIndex(item => item.id === keywordId);
-    if (itemIndex === -1) return;
-
-    const newKeywords = [...keywords];
-    newKeywords[itemIndex] = newValue;
-    onUpdate(newKeywords);
-
-    // 更新选中状态
-    const oldKeyword = keywords[itemIndex];
-    if (selectedKeywords.includes(oldKeyword)) {
-      const newSelected = selectedKeywords.map(k => k === oldKeyword ? newValue : k);
-      onSelectionChange(newSelected);
-    }
+    const updatedKeywords = keywordItems.map(item => 
+      item.id === keywordId 
+        ? { ...item, keyword: newValue }
+        : item
+    );
+    onUpdate(updatedKeywords);
   };
 
   const handleDeleteKeyword = (keywordId) => {
-    const item = keywordsWithIds.find(item => item.id === keywordId);
-    if (!item) return;
-
-    const newKeywords = keywords.filter((_, index) => index !== item.originalIndex);
-    onUpdate(newKeywords);
-
-    // 从选中列表中移除
-    const newSelected = selectedKeywords.filter(k => k !== item.keyword);
-    onSelectionChange(newSelected);
+    const updatedKeywords = keywordItems
+      .filter(item => item.id !== keywordId)
+      .map((item, index) => ({ ...item, order: index + 1 })); // 重新排序
+    
+    onUpdate(updatedKeywords);
   };
 
   const handleAddKeyword = () => {
-    if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
-      const updatedKeywords = [...keywords, newKeyword.trim()];
+    const trimmedKeyword = newKeyword.trim();
+    if (trimmedKeyword && !keywordItems.some(item => item.keyword === trimmedKeyword)) {
+      const newKeywordItem = {
+        id: `keyword-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        keyword: trimmedKeyword,
+        enabled: true,
+        order: keywordItems.length + 1
+      };
+      
+      const updatedKeywords = [...keywordItems, newKeywordItem];
       onUpdate(updatedKeywords);
       setNewKeyword('');
       setShowAddForm(false);
@@ -222,12 +239,37 @@ const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onS
   };
 
   const handleSelectAll = () => {
-    onSelectionChange([...keywords]);
+    const updatedKeywords = keywordItems.map(item => ({ ...item, enabled: true }));
+    onUpdate(updatedKeywords);
   };
 
   const handleSelectNone = () => {
-    onSelectionChange([]);
+    const updatedKeywords = keywordItems.map(item => ({ ...item, enabled: false }));
+    onUpdate(updatedKeywords);
   };
+
+  const handlePinKeyword = (keywordId) => {
+    const updatedKeywords = [...keywordItems];
+    const index = updatedKeywords.findIndex(item => item.id === keywordId);
+    
+    if (index !== -1) {
+      // 将目标关键词移到数组开头
+      const [movedItem] = updatedKeywords.splice(index, 1);
+      updatedKeywords.unshift(movedItem);
+      
+      // 重新分配order值
+      const finalKeywords = updatedKeywords.map((item, index) => ({
+        ...item,
+        order: index + 1
+      }));
+      
+      onUpdate(finalKeywords);
+    }
+  };
+
+  // 统计数据
+  const enabledCount = keywordItems.filter(item => item.enabled).length;
+  const totalCount = keywordItems.length;
 
   return (
     <div className="space-y-4">
@@ -235,7 +277,7 @@ const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onS
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <h3 className="text-lg font-semibold text-gray-800">
-            关键词配置 ({selectedKeywords.length}/{keywords.length} 已选择)
+            关键词配置 ({enabledCount}/{totalCount} 已启用)
           </h3>
           <div className="flex space-x-2">
             <button
@@ -280,7 +322,7 @@ const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onS
             />
             <button
               onClick={handleAddKeyword}
-              disabled={!newKeyword.trim() || keywords.includes(newKeyword.trim())}
+              disabled={!newKeyword.trim() || keywordItems.some(item => item.keyword === newKeyword.trim())}
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               添加
@@ -295,7 +337,7 @@ const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onS
               取消
             </button>
           </div>
-          {newKeyword.trim() && keywords.includes(newKeyword.trim()) && (
+          {newKeyword.trim() && keywordItems.some(item => item.keyword === newKeyword.trim()) && (
             <p className="text-sm text-red-600 mt-2">该关键词已存在</p>
           )}
         </div>
@@ -309,18 +351,17 @@ const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onS
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={keywordsWithIds.map(item => item.id)}
+            items={sortedKeywords.map(item => item.id)}
             strategy={verticalListSortingStrategy}
           >
-            {keywordsWithIds.map((item) => (
+            {sortedKeywords.map((item) => (
               <SortableKeywordItem
                 key={item.id}
-                id={item.id}
-                keyword={item.keyword}
-                isSelected={selectedKeywords.includes(item.keyword)}
+                keywordItem={item}
                 onToggle={handleToggleKeyword}
                 onEdit={handleEditKeyword}
                 onDelete={handleDeleteKeyword}
+                onPin={handlePinKeyword}
               />
             ))}
           </SortableContext>
@@ -328,7 +369,7 @@ const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onS
       </div>
 
       {/* 空状态 */}
-      {keywords.length === 0 && (
+      {keywordItems.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
@@ -341,14 +382,15 @@ const EnhancedKeywordManager = ({ keywords, selectedKeywords = [], onUpdate, onS
       <div className="text-xs text-gray-500 p-3 bg-blue-50 rounded-lg">
         <p className="font-medium mb-1">使用说明：</p>
         <ul className="space-y-1">
+          <li>• 左侧数字显示搜索优先级，数字越小优先级越高</li>
           <li>• 拖拽 ⋮⋮ 图标可调整关键词优先级顺序</li>
           <li>• 勾选关键词以启用抓取，未勾选的关键词将被跳过</li>
           <li>• 双击关键词文本可快速编辑</li>
-          <li>• 系统将按照列表顺序依次搜索已选择的关键词</li>
+          <li>• 系统将按照优先级顺序依次搜索已启用的关键词</li>
         </ul>
       </div>
     </div>
   );
 };
 
-export default EnhancedKeywordManager; 
+export default KeywordConfigManager; 

@@ -1,7 +1,17 @@
 export const regions = {
+  northAmerica: {
+    name: '北美',
+    countries: [
+      { name: '美国', geoId: '103644278' },
+      { name: '加拿大', geoId: '101174742' }
+    ]
+  },
   europe: {
     name: '欧洲',
     countries: [
+      { name: '英国', geoId: '101165590' },
+      { name: '德国', geoId: '101282230' },
+      { name: '法国', geoId: '105015875' },
       { name: '西班牙', geoId: '105646813' },
       { name: '意大利', geoId: '103350119' },
       { name: '荷兰', geoId: '102890719' },
@@ -24,28 +34,17 @@ export const regions = {
       { name: '日本', geoId: '101355337' },
       { name: '韩国', geoId: '105149562' },
       { name: '新加坡', geoId: '102454443' },
-      // { name: '印度', geoId: '102713980' },
+      { name: '印度', geoId: '102713980' },
       { name: '中国', geoId: '102890883' }
-    ]
-  },
-  northAmerica: {
-    name: '北美',
-    countries: [
-      { name: '美国', geoId: '103644278' },
-      { name: '加拿大', geoId: '101174742' }
     ]
   },
   other: {
     name: '其他主要国家',
     countries: [
-      { name: '英国', geoId: '101165590' },
-      { name: '德国', geoId: '101282230' },
-      { name: '法国', geoId: '105015875' },
-      // { name: '巴西', geoId: '106057199' },
-      // { name: '墨西哥', geoId: '103323778' },
-      // { name: '南非', geoId: '104035573' },
-      // { name: '阿根廷', geoId: '100446943' }
-      // 已经爬取
+      { name: '巴西', geoId: '106057199' },
+      { name: '墨西哥', geoId: '103323778' },
+      { name: '南非', geoId: '104035573' },
+      { name: '阿根廷', geoId: '100446943' }
     ]
   },
 }; 

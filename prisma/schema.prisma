@@ -56,3 +56,14 @@ model TaskProgress {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+// 搜索配置模型
+model SearchConfig {
+  configType    String   @id  // 配置类型：'keywords' 或 'countries'
+  configData    Json     // 配置数据（JSON格式）
+  // configData 结构：
+  // keywords: [{ id, keyword, enabled, order }]
+  // countries: [{ id, name, code, geoId, enabled, order }]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

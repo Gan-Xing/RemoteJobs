@@ -2,60 +2,37 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import TaskStatus from "../components/TaskStatus";
 import TaskControls from "../components/TaskControls";
-import EnhancedKeywordManager from "../components/EnhancedKeywordManager";
+import SearchConfigModal from "../components/SearchConfigModal";
 import LocalStorageMonitor from "../components/LocalStorageMonitor";
 
 export default function TaskControl() {
   const [status, setStatus] = useState({ status: "loading", running: false });
   const [scrapeSpeed, setScrapeSpeed] = useState("normal"); // 默认使用正常速度
-  const [keywords, setKeywords] = useState([
-    "javascript",
-    "nodejs",
-    "frontend",
-    "react",
-    "web developer",
-    "fullstack",
-    "typescript",
-    "vue",
-    "angular",
-    "nextjs",
-    "nuxtjs",
-    "svelte",
-    "ember.js",
-    "extjs",
-    "html css",
-    "tailwind",
-    "bootstrap",
-  ]);
-  const [selectedKeywords, setSelectedKeywords] = useState([]);
+  const [keywordItems, setKeywordItems] = useState([]);
+  const [countryItems, setCountryItems] = useState([]);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   // 处理任务状态更新
   const handleStatusChange = (newStatus) => {
     setStatus(newStatus);
   };
 
-  // 初始加载时获取关键词
+  // 初始加载时获取配置
   useEffect(() => {
-    // 加载关键词
-    const fetchKeywords = async () => {
+    const fetchConfig = async () => {
       try {
-        const res = await fetch("/api/task/keywords");
+        const res = await fetch("/api/config/search");
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data.keywords)) {
-            setKeywords(data.keywords);
-            // 默认选择所有关键词
-            setSelectedKeywords(data.keywords);
-          }
+          setKeywordItems(data.keywordItems || []);
+          setCountryItems(data.countryItems || []);
         }
       } catch (error) {
-        console.error("获取关键词失败:", error);
-        // 如果获取失败，默认选择所有预设关键词
-        setSelectedKeywords([...keywords]);
+        console.error("获取配置失败:", error);
       }
     };
 
-    fetchKeywords();
+    fetchConfig();
   }, []);
 
   useEffect(() => {
@@ -140,8 +117,16 @@ export default function TaskControl() {
   const handleStart = async () => {
     try {
       // 验证是否选择了关键词
-      if (selectedKeywords.length === 0) {
+      const enabledKeywords = keywordItems.filter(item => item.enabled);
+      const enabledCountries = countryItems.filter(item => item.enabled);
+      
+      if (enabledKeywords.length === 0) {
         alert("请至少选择一个关键词进行抓取");
+        return;
+      }
+      
+      if (enabledCountries.length === 0) {
+        alert("请至少选择一个国家/地区进行抓取");
         return;
       }
 
@@ -163,7 +148,8 @@ export default function TaskControl() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          keywords: selectedKeywords, // 只发送选中的关键词
+          keywords: enabledKeywords.sort((a, b) => a.order - b.order).map(item => item.keyword),
+          countries: enabledCountries.sort((a, b) => a.order - b.order),
           scrapeSpeed, // 发送抓取速度设置
         }),
       });
@@ -347,32 +333,27 @@ export default function TaskControl() {
     }
   };
 
-  const handleKeywordsUpdate = async (newKeywords) => {
+  const handleConfigSave = async (configData) => {
     try {
-      const response = await fetch("/api/task/keywords", {
+      const response = await fetch("/api/config/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ keywords: newKeywords }),
+        body: JSON.stringify(configData),
       });
 
       if (!response.ok) {
-        throw new Error("更新关键词失败");
+        throw new Error("保存配置失败");
       }
 
-      setKeywords(newKeywords);
-      
-      // 更新选中状态，保留仍然存在的关键词的选中状态
-      const newSelected = selectedKeywords.filter(keyword => newKeywords.includes(keyword));
-      setSelectedKeywords(newSelected);
+      // 更新本地状态
+      setKeywordItems(configData.keywordItems);
+      setCountryItems(configData.countryItems);
     } catch (error) {
-      console.error("更新关键词错误:", error);
+      console.error("保存配置错误:", error);
+      throw error;
     }
-  };
-
-  const handleKeywordSelectionChange = (newSelectedKeywords) => {
-    setSelectedKeywords(newSelectedKeywords);
   };
 
   return (
@@ -402,7 +383,10 @@ export default function TaskControl() {
                 {status.running && <span className="ml-1 animate-pulse">●</span>}
               </div>
               <div className="px-3 py-1 inline-block rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
-                关键词: <span className="font-bold">{selectedKeywords.length}/{keywords.length}</span> 已启用
+                关键词: <span className="font-bold">{keywordItems.filter(item => item.enabled).length}/{keywordItems.length}</span> 已启用
+              </div>
+              <div className="px-3 py-1 inline-block rounded-full text-sm font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                国家: <span className="font-bold">{countryItems.filter(item => item.enabled).length}/{countryItems.length}</span> 已启用
               </div>
             </div>
           </div>
@@ -478,29 +462,95 @@ export default function TaskControl() {
           </p>
         </div>
 
+        {/* 搜索配置按钮 */}
+        <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold mb-2 text-gray-800">搜索配置</h2>
+              <p className="text-sm text-gray-600">
+                配置关键词和国家/地区，系统将按照您的设置进行职位搜索
+              </p>
+            </div>
+            <button
+              onClick={() => setIsConfigModalOpen(true)}
+              className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="m12 1 0 6m0 6 0 6m11-7-6 0m-6 0-6 0"/>
+              </svg>
+              配置搜索参数
+            </button>
+          </div>
+        </div>
+
         {/* 状态显示区域 */}
         <TaskStatus status={status} onStatusChange={handleStatusChange} />
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* 左列：本地存储监控 */}
-          <div className="lg:w-1/3 space-y-8">
+          <div className="lg:w-1/2 space-y-8">
             {/* 本地存储监控 */}
             <LocalStorageMonitor />
           </div>
 
-          {/* 右列：关键词管理 */}
-          <div className="lg:w-2/3 flex flex-col h-full space-y-8">
-            {/* 增强版关键词管理区域 */}
-            <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col flex-grow">
-              <EnhancedKeywordManager
-                keywords={keywords}
-                selectedKeywords={selectedKeywords}
-                onUpdate={handleKeywordsUpdate}
-                onSelectionChange={handleKeywordSelectionChange}
-              />
+          {/* 右列：配置概览 */}
+          <div className="lg:w-1/2 flex flex-col h-full space-y-8">
+            {/* 配置概览 */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">当前配置概览</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">已启用关键词 ({keywordItems.filter(item => item.enabled).length}个)</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {keywordItems.filter(item => item.enabled).slice(0, 8).map((item) => (
+                      <span key={item.id} className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">
+                        {item.order}. {item.keyword}
+                      </span>
+                    ))}
+                    {keywordItems.filter(item => item.enabled).length > 8 && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                        +{keywordItems.filter(item => item.enabled).length - 8} 更多...
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">已启用国家 ({countryItems.filter(item => item.enabled).length}个)</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {countryItems.filter(item => item.enabled).slice(0, 6).map((item) => (
+                      <span key={item.id} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                        {item.order}. {item.name}
+                      </span>
+                    ))}
+                    {countryItems.filter(item => item.enabled).length > 6 && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                        +{countryItems.filter(item => item.enabled).length - 6} 更多...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-700">
+                  💡 点击"配置搜索参数"按钮可以调整关键词和国家的启用状态及优先级顺序
+                </p>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* 搜索配置弹窗 */}
+        <SearchConfigModal
+          isOpen={isConfigModalOpen}
+          onClose={() => setIsConfigModalOpen(false)}
+          keywordItems={keywordItems}
+          countryItems={countryItems}
+          onSave={handleConfigSave}
+        />
 
         {/* 重试提示 - 当有重试操作时显示 */}
         {status.lastError && status.lastError.includes("重试") && (
