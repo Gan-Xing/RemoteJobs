@@ -59,13 +59,14 @@ model TaskProgress {
 
 // 搜索配置模型
 model SearchConfig {
-  configType    String   @id  // 配置类型：'keywords' 或 'countries'
-  configData    Json     // 配置数据（JSON格式）
-  // configData 结构：
-  // keywords: [{ id, keyword, enabled, order }]
-  // countries: [{ id, name, code, geoId, enabled, order }]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String               // 标识用户（可对接登录系统、邮箱、或 GitHub ID）
+  configType  String               // 任意类型，如 'keywords'、'countries'、'xxxPrompt'
+  configData  Json                 // 配置 JSON 内容
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, configType], name: "userId_configType")  // 每个用户每个类型只能有一条
 }
 
 // 汇率模型

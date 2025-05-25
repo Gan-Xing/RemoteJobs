@@ -1,23 +1,34 @@
 import { prisma } from '../../../utils/prisma';
 
 export default async function handler(req, res) {
+  const userId = 'ganxing'; // 默认用户ID
+
   if (req.method === 'GET') {
     try {
       // 获取关键词配置
       const keywordConfig = await prisma.searchConfig.findFirst({
-        where: { configType: 'keywords' },
+        where: {
+          userId,
+          configType: 'keywords'
+        },
         orderBy: { updatedAt: 'desc' }
       });
 
       // 获取国家配置
       const countryConfig = await prisma.searchConfig.findFirst({
-        where: { configType: 'countries' },
+        where: {
+          userId,
+          configType: 'countries'
+        },
         orderBy: { updatedAt: 'desc' }
       });
 
       // 获取搜索参数配置
       const searchParamsConfig = await prisma.searchConfig.findFirst({
-        where: { configType: 'searchParams' },
+        where: {
+          userId,
+          configType: 'searchParams'
+        },
         orderBy: { updatedAt: 'desc' }
       });
 
@@ -45,24 +56,58 @@ export default async function handler(req, res) {
       }
 
       // 保存关键词配置
-      await prisma.searchConfig.create({
-        data: {
+      await prisma.searchConfig.upsert({
+        where: {
+          userId_configType: {
+            userId,
+            configType: 'keywords'
+          }
+        },
+        update: {
+          configData: { keywordItems }
+        },
+        create: {
+          userId,
           configType: 'keywords',
           configData: { keywordItems }
         }
       });
 
       // 保存国家配置
-      await prisma.searchConfig.create({
-        data: {
+      await prisma.searchConfig.upsert({
+        where: {
+          userId_configType: {
+            userId,
+            configType: 'countries'
+          }
+        },
+        update: {
+          configData: { countryItems }
+        },
+        create: {
+          userId,
           configType: 'countries',
           configData: { countryItems }
         }
       });
 
       // 保存搜索参数配置
-      await prisma.searchConfig.create({
-        data: {
+      await prisma.searchConfig.upsert({
+        where: {
+          userId_configType: {
+            userId,
+            configType: 'searchParams'
+          }
+        },
+        update: {
+          configData: searchParams || {
+            resultThreshold: 50,
+            deduplicateBeforeDetail: true,
+            useDeduplicatedCount: true
+          }
+        },
+        create: {
+          userId,
           configType: 'searchParams',
           configData: searchParams || {
             resultThreshold: 50,

@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { customAlphabet } from 'nanoid';
 
-const prisma = new PrismaClient({
+export const prisma = new PrismaClient({
   log: ['error', 'warn'],
   datasources: {
     db: {
