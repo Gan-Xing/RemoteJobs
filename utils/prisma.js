@@ -177,7 +177,7 @@ export const saveJobs = async (jobs) => {
     }
   }
   
-  throw new Error('所有重试失败');
+  return [];
 };
 
 // 获取所有职位数据（用于数据分析页面）

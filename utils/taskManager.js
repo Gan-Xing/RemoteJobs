@@ -1075,7 +1075,11 @@ async function executeTask() {
         // 保存已收集的数据
         if (jobsWithDetails && jobsWithDetails.length > 0) {
           console.log(`[任务管理器] 中断前保存 ${jobsWithDetails.length} 个已收集的职位数据...`);
-          await saveCollectedData(jobsWithDetails);
+          try {
+            await saveCollectedData(jobsWithDetails);
+          } catch (saveErr) {
+            console.error('[任务管理器] 中断时保存数据失败（已忽略）:', saveErr.message);
+          }
         }
         
         // 关闭浏览器（如果存在）
@@ -1373,7 +1377,18 @@ async function executeTask() {
               await page.waitForTimeout(1000);
               
               // 获取职位卡片
-              const jobCards = await page.$$("li");
+              let jobCards = [];
+              try {
+                jobCards = await page.$$("li");
+              } catch (paginationError) {
+                const errMsg = paginationError.message || '';
+                if (errMsg.includes('Execution context was destroyed')) {
+                  console.warn(`[任务管理器] 页面执行上下文被销毁，可能因导航跳转或Playwright异常。跳过当前step。`);
+                } else {
+                  console.error(`[任务管理器] 分页处理出错:`, errMsg);
+                }
+                continue;
+              }
               
               if (jobCards.length === 0) {
                 console.log(`[任务管理器] 第 ${currentPage+1} 页未找到职位数据`);
@@ -1845,7 +1860,11 @@ async function executeTask() {
               
               // 每完成一个批次就保存数据
               if (jobsWithDetails.length > 0) {
-                await saveCollectedData(jobsWithDetails);
+                try {
+                  await saveCollectedData(jobsWithDetails);
+                } catch (saveErr) {
+                  console.error('[任务管理器] 批次保存数据失败（已忽略）:', saveErr.message);
+                }
                 jobsWithDetails = []; // 清空数组，准备下一批次
               }
             }
@@ -1854,7 +1873,11 @@ async function executeTask() {
 
             // 如果还有未保存的数据，进行最终保存
             if (jobsWithDetails.length > 0) {
-              await saveCollectedData(jobsWithDetails);
+              try {
+                await saveCollectedData(jobsWithDetails);
+              } catch (saveErr) {
+                console.error('[任务管理器] 最终保存数据失败（已忽略）:', saveErr.message);
+              }
             }
             
             // 判断是否需要调整搜索策略

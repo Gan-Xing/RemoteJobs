@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import path from 'path';
-import { generateSearchId, saveSearch, saveJobs } from '../../utils/prisma';
+import { saveJobs } from '../../utils/prisma';
 import { convertSalaryToUSD } from '../../utils/salaryConverter';
 
 // 设置临时文件存储位置
