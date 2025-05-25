@@ -1076,7 +1076,7 @@ const saveCollectedData = async (jobsWithDetails) => {
       }
       return {
         ...job,
-        salaryNumeric: numericSalary
+        salary_numeric: numericSalary
       };
     }));
 
