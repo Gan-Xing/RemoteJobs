@@ -1,7 +1,4 @@
 import { getTaskStatus, subscribeToState } from '../../../utils/taskManager';
-import fs from 'fs';
-import path from 'path';
-
 // 跟踪活动连接
 const activeConnections = new Map();
 let connectionCount = 0;

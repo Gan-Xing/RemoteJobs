@@ -217,7 +217,7 @@ function convertToAnnual(amount, period) {
 
 // 将薪资转换为美元年薪
 async function convertSalaryToUSD(salaryString) {
-  console.log(`[salaryConverter] Attempting to convert salary: "${salaryString}"`);
+  // console.log(`[salaryConverter] Attempting to convert salary: "${salaryString}"`);
   
   if (!salaryString || typeof salaryString !== 'string' || salaryString.trim() === '0' || salaryString.trim() === '未找到') {
     console.log(`[salaryConverter] Salary string is invalid, null, zero, or '未找到'. Returning null.`);
@@ -226,27 +226,27 @@ async function convertSalaryToUSD(salaryString) {
 
   try {
     const rates = await getExchangeRates();
-    console.log(`[salaryConverter] Using rates: ${JSON.stringify(rates)}`);
+    // console.log(`[salaryConverter] Using rates: ${JSON.stringify(rates)}`);
 
     if (!rates || typeof rates !== 'object' || Object.keys(rates).length === 0) {
-      console.error('[salaryConverter] Invalid or empty rates object received. Returning null.', rates);
+      // console.error('[salaryConverter] Invalid or empty rates object received. Returning null.', rates);
       return null;
     }
 
     // 解析薪资字符串
     const parsed = parseSalaryString(salaryString);
     if (!parsed) {
-      console.log(`[salaryConverter] Failed to parse salary string: "${salaryString}". Returning null.`);
+      // console.log(`[salaryConverter] Failed to parse salary string: "${salaryString}". Returning null.`);
       return null;
     }
 
-    console.log(`[salaryConverter] Parsed salary:`, parsed);
+    // console.log(`[salaryConverter] Parsed salary:`, parsed);
 
     // 处理范围薪资
     let amount;
     if (parsed.amount2) {
       amount = (parsed.amount1 + parsed.amount2) / 2;
-      console.log(`[salaryConverter] Range salary detected. Using average: (${parsed.amount1} + ${parsed.amount2}) / 2 = ${amount}`);
+      // console.log(`[salaryConverter] Range salary detected. Using average: (${parsed.amount1} + ${parsed.amount2}) / 2 = ${amount}`);
     } else {
       amount = parsed.amount1;
     }
@@ -257,7 +257,7 @@ async function convertSalaryToUSD(salaryString) {
       console.error(`[salaryConverter] Failed to convert to USD. Currency: ${parsed.currency}, Amount: ${amount}`);
       return null;
     }
-    console.log(`[salaryConverter] Converted to USD: ${usdAmount}`);
+    // console.log(`[salaryConverter] Converted to USD: ${usdAmount}`);
 
     // 转换为年薪
     let annualAmount = convertToAnnual(usdAmount, parsed.period);
@@ -265,11 +265,11 @@ async function convertSalaryToUSD(salaryString) {
       console.error(`[salaryConverter] Failed to convert to annual. Period: ${parsed.period}, Amount: ${usdAmount}`);
       return null;
     }
-    console.log(`[salaryConverter] Converted to annual: ${annualAmount}`);
+    // console.log(`[salaryConverter] Converted to annual: ${annualAmount}`);
 
     // 四舍五入到整数
     const finalAmount = Math.round(annualAmount);
-    console.log(`[salaryConverter] Final rounded amount: ${finalAmount}`);
+    // console.log(`[salaryConverter] Final rounded amount: ${finalAmount}`);
 
     return finalAmount;
 
