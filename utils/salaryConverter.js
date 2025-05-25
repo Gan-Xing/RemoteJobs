@@ -1,5 +1,34 @@
 const axios = require('axios');
 const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
+const path = require('path');
+const CACHE_FILE = path.join(__dirname, 'exchangeRateCache.json');
+
+// ---------- 本地文件缓存工具 ----------
+function loadCacheFromFile() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const raw = fs.readFileSync(CACHE_FILE, 'utf8');
+      const data = JSON.parse(raw);
+      if (data && data.rates && data.expiry) {
+        data.expiry = new Date(data.expiry);
+        return data;
+      }
+    }
+  } catch (e) {
+    console.error('[salaryConverter] 读取本地汇率缓存文件失败:', e.message);
+  }
+  return null;
+}
+
+function saveCacheToFile(cacheObj) {
+  try {
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheObj, null, 2));
+  } catch (e) {
+    console.error('[salaryConverter] 写入本地汇率缓存文件失败:', e.message);
+  }
+}
+// ---------- 本地文件缓存工具结束 ----------
 const prisma = new PrismaClient();
 
 // 添加汇率缓存
@@ -7,6 +36,12 @@ let exchangeRateCache = {
   rates: null,
   expiry: null,
 };
+
+// 尝试从本地文件恢复缓存
+const fileCache = loadCacheFromFile();
+if (fileCache) {
+  exchangeRateCache = fileCache;
+}
 
 // 缓存有效期：24小时
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
@@ -39,13 +74,13 @@ async function getExchangeRates() {
     });
 
     if (todayRates) {
-      console.log('[salaryConverter] 使用数据库中今天的汇率:', todayRates.rates);
 
       // ✅ 更新缓存
       exchangeRateCache = {
         rates: todayRates.rates,
         expiry: new Date(now.getTime() + CACHE_DURATION),
       };
+      saveCacheToFile(exchangeRateCache);
 
       return todayRates.rates;
     }
@@ -73,6 +108,7 @@ async function getExchangeRates() {
         rates,
         expiry: new Date(now.getTime() + CACHE_DURATION),
       };
+      saveCacheToFile(exchangeRateCache);
 
       return rates;
     } else {
@@ -97,6 +133,7 @@ async function getExchangeRates() {
           rates: lastValidRates.rates,
           expiry: new Date(now.getTime() + CACHE_DURATION),
         };
+        saveCacheToFile(exchangeRateCache);
 
         return lastValidRates.rates;
       }
@@ -135,6 +172,7 @@ async function getExchangeRates() {
       rates: defaultRates,
       expiry: new Date(now.getTime() + CACHE_DURATION),
     };
+    saveCacheToFile(exchangeRateCache);
 
     return defaultRates;
   }
