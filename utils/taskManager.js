@@ -310,70 +310,70 @@ export let taskConfig = {
   }
 };
 
-// 从数据库加载配置
-export const loadTaskConfig = async () => {
-  try {
-    // 获取关键词配置
-    const keywordConfig = await prisma.searchConfig.findFirst({
-      where: { configType: 'keywords' },
-      orderBy: { updatedAt: 'desc' }
-    });
+// // 从数据库加载配置
+// export const loadTaskConfig = async () => {
+//   try {
+//     // 获取关键词配置
+//     const keywordConfig = await prisma.searchConfig.findFirst({
+//       where: { configType: 'keywords' },
+//       orderBy: { updatedAt: 'desc' }
+//     });
 
-    // 获取国家配置
-    const countryConfig = await prisma.searchConfig.findFirst({
-      where: { configType: 'countries' },
-      orderBy: { updatedAt: 'desc' }
-    });
+//     // 获取国家配置
+//     const countryConfig = await prisma.searchConfig.findFirst({
+//       where: { configType: 'countries' },
+//       orderBy: { updatedAt: 'desc' }
+//     });
 
-    // 获取搜索参数配置
-    const searchParamsConfig = await prisma.searchConfig.findFirst({
-      where: { configType: 'searchParams' },
-      orderBy: { updatedAt: 'desc' }
-    });
+//     // 获取搜索参数配置
+//     const searchParamsConfig = await prisma.searchConfig.findFirst({
+//       where: { configType: 'searchParams' },
+//       orderBy: { updatedAt: 'desc' }
+//     });
 
-    // 更新关键词列表
-    if (keywordConfig?.configData?.keywordItems) {
-      // 只获取启用的关键词
-      taskConfig.keywords = keywordConfig.configData.keywordItems
-        .filter(item => item.enabled)
-        .sort((a, b) => a.order - b.order)
-        .map(item => item.keyword);
-    }
+//     // 更新关键词列表
+//     if (keywordConfig?.configData?.keywordItems) {
+//       // 只获取启用的关键词
+//       taskConfig.keywords = keywordConfig.configData.keywordItems
+//         .filter(item => item.enabled)
+//         .sort((a, b) => a.order - b.order)
+//         .map(item => item.keyword);
+//     }
 
-    // 更新地区列表
-    if (countryConfig?.configData?.countryItems) {
-      // 只获取启用的国家
-      const enabledCountries = countryConfig.configData.countryItems
-        .filter(item => item.enabled)
-        .sort((a, b) => a.order - b.order);
+//     // 更新地区列表
+//     if (countryConfig?.configData?.countryItems) {
+//       // 只获取启用的国家
+//       const enabledCountries = countryConfig.configData.countryItems
+//         .filter(item => item.enabled)
+//         .sort((a, b) => a.order - b.order);
 
-      // 更新regions对象
-      Object.keys(regions).forEach(regionKey => {
-        regions[regionKey].countries = regions[regionKey].countries.filter(country => 
-          enabledCountries.some(enabled => enabled.geoId === country.geoId)
-        );
-      });
-    }
+//       // 更新regions对象
+//       Object.keys(regions).forEach(regionKey => {
+//         regions[regionKey].countries = regions[regionKey].countries.filter(country => 
+//           enabledCountries.some(enabled => enabled.geoId === country.geoId)
+//         );
+//       });
+//     }
 
-    // 更新搜索参数配置
-    if (searchParamsConfig?.configData) {
-      taskConfig.searchParams = {
-        ...taskConfig.searchParams,
-        ...searchParamsConfig.configData
-      };
-    }
+//     // 更新搜索参数配置
+//     if (searchParamsConfig?.configData) {
+//       taskConfig.searchParams = {
+//         ...taskConfig.searchParams,
+//         ...searchParamsConfig.configData
+//       };
+//     }
 
-    console.log('[任务管理器] 已从数据库加载配置');
-    console.log('[任务管理器] 启用的关键词:', taskConfig.keywords);
-    console.log('[任务管理器] 启用的地区数量:', getAllGeoIds().length);
-    console.log('[任务管理器] 搜索参数配置:', taskConfig.searchParams);
+//     console.log('[任务管理器] 已从数据库加载配置');
+//     console.log('[任务管理器] 启用的关键词:', taskConfig.keywords);
+//     console.log('[任务管理器] 启用的地区数量:', getAllGeoIds().length);
+//     console.log('[任务管理器] 搜索参数配置:', taskConfig.searchParams);
 
-    return true;
-  } catch (error) {
-    console.error('[任务管理器] 加载配置失败:', error);
-    return false;
-  }
-};
+//     return true;
+//   } catch (error) {
+//     console.error('[任务管理器] 加载配置失败:', error);
+//     return false;
+//   }
+// };
 
 // 获取所有geoId
 const getAllGeoIds = () => {
