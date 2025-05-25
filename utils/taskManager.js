@@ -644,11 +644,65 @@ const stopElapsedTimer = () => {
 // 开始任务
 export const startTask = async () => {
   try {
-    // 先加载配置
-    const configLoaded = await loadTaskConfig();
-    if (!configLoaded) {
-      throw new Error('加载任务配置失败');
+    // 直接使用Prisma查询数据库获取配置
+    const userId = 'ganxing'; // 使用与API相同的userId
+
+    // 获取关键词配置
+    const keywordConfig = await prisma.searchConfig.findFirst({
+      where: {
+        userId,
+        configType: 'keywords'
+      }
+    });
+
+    // 获取国家配置
+    const countryConfig = await prisma.searchConfig.findFirst({
+      where: {
+        userId,
+        configType: 'countries'
+      }
+    });
+
+    // 获取搜索参数配置
+    const searchParamsConfig = await prisma.searchConfig.findFirst({
+      where: {
+        userId,
+        configType: 'searchParams'
+      }
+    });
+
+    // 更新任务配置
+    if (keywordConfig?.configData?.keywordItems) {
+      taskConfig.keywords = keywordConfig.configData.keywordItems
+        .filter(item => item.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map(item => item.keyword);
     }
+
+    if (countryConfig?.configData?.countryItems) {
+      const enabledCountries = countryConfig.configData.countryItems
+        .filter(item => item.enabled)
+        .sort((a, b) => a.order - b.order);
+
+      // 更新regions对象
+      Object.keys(regions).forEach(regionKey => {
+        regions[regionKey].countries = regions[regionKey].countries.filter(country => 
+          enabledCountries.some(enabled => enabled.geoId === country.geoId)
+        );
+      });
+    }
+
+    if (searchParamsConfig?.configData) {
+      taskConfig.searchParams = {
+        ...taskConfig.searchParams,
+        ...searchParamsConfig.configData
+      };
+    }
+
+    console.log('[任务管理器] 已从数据库加载配置');
+    console.log('[任务管理器] 启用的关键词:', taskConfig.keywords);
+    console.log('[任务管理器] 启用的地区数量:', getAllGeoIds().length);
+    console.log('[任务管理器] 搜索参数配置:', taskConfig.searchParams);
 
     // 获取初始关键词和地区ID
     const allKeywords = taskConfig.keywords;
