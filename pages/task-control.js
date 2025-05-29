@@ -4,6 +4,7 @@ import TaskStatus from "../components/TaskStatus";
 import TaskControls from "../components/TaskControls";
 import SearchConfigModal from "../components/SearchConfigModal";
 import LocalStorageMonitor from "../components/LocalStorageMonitor";
+import { useSSE } from "../components/SSEProvider";
 
 export default function TaskControl() {
   const [status, setStatus] = useState({ status: "loading", running: false });
@@ -16,6 +17,7 @@ export default function TaskControl() {
     useDeduplicatedCount: true
   });
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const { connected, taskStatus, error } = useSSE();
 
   // 处理任务状态更新
   const handleStatusChange = (newStatus) => {
@@ -45,79 +47,12 @@ export default function TaskControl() {
     fetchConfig();
   }, []);
 
+  // 当从SSE获取到新状态时更新本地状态
   useEffect(() => {
-    // 初始化SSE连接 - 添加自动重连逻辑
-    let eventSource = null;
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
-    const reconnectDelay = 2000; // 2秒
-
-    const connectSSE = () => {
-      console.log("建立状态更新连接...");
-      eventSource = new EventSource("/api/task/sse");
-
-      eventSource.onmessage = (event) => {
-        try {
-          const newStatus = JSON.parse(event.data);
-          console.log("收到状态更新:", newStatus);
-
-          // 状态变化监控
-          if (
-            status.status !== newStatus.status ||
-            status.running !== newStatus.running
-          ) {
-            console.log(
-              "状态发生变化!",
-              `之前: [status=${status.status}, running=${status.running}]`,
-              `现在: [status=${newStatus.status}, running=${newStatus.running}]`
-            );
-          }
-
-          // 重要: 更新状态
-          handleStatusChange(newStatus);
-
-          // 重置重连尝试次数
-          reconnectAttempts = 0;
-        } catch (error) {
-          console.error("解析状态更新失败:", error, event.data);
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error("状态更新连接错误:", error);
-        eventSource.close();
-
-        // 尝试重连
-        if (reconnectAttempts < maxReconnectAttempts) {
-          reconnectAttempts++;
-          console.log(
-            `尝试重新连接... (${reconnectAttempts}/${maxReconnectAttempts})`
-          );
-          setTimeout(connectSSE, reconnectDelay);
-        } else {
-          console.error(
-            `已达到最大重连次数 (${maxReconnectAttempts})，停止尝试`
-          );
-        }
-      };
-
-      eventSource.onopen = () => {
-        console.log("状态更新连接已建立");
-        // 重置重连尝试次数
-        reconnectAttempts = 0;
-      };
-    };
-
-    // 建立初始连接
-    connectSSE();
-
-    return () => {
-      console.log("关闭状态更新连接");
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-  }, []);
+    if (taskStatus) {
+      handleStatusChange(taskStatus);
+    }
+  }, [taskStatus]);
 
   // 监视状态变化
   useEffect(() => {
@@ -393,6 +328,16 @@ export default function TaskControl() {
                 任务状态: <span className="font-bold">{status.status}</span>
                 {status.running && <span className="ml-1 animate-pulse">●</span>}
               </div>
+              {/* 添加SSE连接状态显示 */}
+              <div
+                className={`px-3 py-1 inline-block rounded-full text-sm font-medium ${
+                  connected
+                    ? "bg-green-100 text-green-800 border border-green-200"
+                    : "bg-red-100 text-red-800 border border-red-200"
+                }`}
+              >
+                实时连接: <span className="font-bold">{connected ? "已连接" : "已断开"}</span>
+              </div>
               <div className="px-3 py-1 inline-block rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
                 关键词: <span className="font-bold">{keywordItems.filter(item => item.enabled).length}/{keywordItems.length}</span> 已启用
               </div>
@@ -401,6 +346,20 @@ export default function TaskControl() {
               </div>
             </div>
           </div>
+          {/* 显示SSE错误信息 */}
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h3 className="text-sm font-medium text-red-800">实时连接错误</h3>
+                  <p className="mt-1 text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
           {/* 任务控制卡片 */}
           <div className="mt-4">
             <TaskControls

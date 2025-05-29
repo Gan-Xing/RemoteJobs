@@ -32,8 +32,6 @@ export default async function handler(req, res) {
         orderBy: { updatedAt: 'desc' }
       });
 
-      console.log('连接数据库，获取配置数据', keywordConfig, countryConfig, searchParamsConfig);
-
       // 返回配置数据
       res.status(200).json({
         keywordItems: keywordConfig?.configData?.keywordItems || [],
