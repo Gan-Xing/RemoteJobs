@@ -1,22 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { customAlphabet } from 'nanoid';
 
-export const prisma = new PrismaClient({
-  log: ['error', 'warn'],
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL
-    }
-  },
-  // 添加重试配置
-  __internal: {
-    engine: {
-      connectionTimeout: 10000, // 10秒连接超时
-      retryAttempts: 3, // 重试3次
-      retryDelay: 1000 // 重试间隔1秒
-    }
-  }
-});
 
 // 添加数据库连接检查函数
 const checkDatabaseConnection = async () => {

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { regions } from './regions';
 import fs from 'fs';
 import path from 'path';
@@ -78,9 +78,6 @@ const LOCAL_STORAGE_FILE = path.join(process.cwd(), 'data', 'local_jobs.json');
 
 // 添加任务状态持久化文件路径
 const TASK_STATE_FILE = path.join(process.cwd(), 'data', 'task_state.json');
-
-// 初始化 Prisma 客户端
-const prisma = new PrismaClient();
 
 // 任务状态
 let taskState = {
@@ -298,7 +295,6 @@ export let taskConfig = {
     { f_WT: ['2'] },
     { f_WT: ['2'], f_SB2: '1' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'] },
-    { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r7776000' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r2592000' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r604800' },
     { f_WT: ['2'], f_SB2: '1', f_JT: ['F'], f_TPR: 'r86400' }
@@ -309,71 +305,6 @@ export let taskConfig = {
     useDeduplicatedCount: true
   }
 };
-
-// // 从数据库加载配置
-// export const loadTaskConfig = async () => {
-//   try {
-//     // 获取关键词配置
-//     const keywordConfig = await prisma.searchConfig.findFirst({
-//       where: { configType: 'keywords' },
-//       orderBy: { updatedAt: 'desc' }
-//     });
-
-//     // 获取国家配置
-//     const countryConfig = await prisma.searchConfig.findFirst({
-//       where: { configType: 'countries' },
-//       orderBy: { updatedAt: 'desc' }
-//     });
-
-//     // 获取搜索参数配置
-//     const searchParamsConfig = await prisma.searchConfig.findFirst({
-//       where: { configType: 'searchParams' },
-//       orderBy: { updatedAt: 'desc' }
-//     });
-
-//     // 更新关键词列表
-//     if (keywordConfig?.configData?.keywordItems) {
-//       // 只获取启用的关键词
-//       taskConfig.keywords = keywordConfig.configData.keywordItems
-//         .filter(item => item.enabled)
-//         .sort((a, b) => a.order - b.order)
-//         .map(item => item.keyword);
-//     }
-
-//     // 更新地区列表
-//     if (countryConfig?.configData?.countryItems) {
-//       // 只获取启用的国家
-//       const enabledCountries = countryConfig.configData.countryItems
-//         .filter(item => item.enabled)
-//         .sort((a, b) => a.order - b.order);
-
-//       // 更新regions对象
-//       Object.keys(regions).forEach(regionKey => {
-//         regions[regionKey].countries = regions[regionKey].countries.filter(country => 
-//           enabledCountries.some(enabled => enabled.geoId === country.geoId)
-//         );
-//       });
-//     }
-
-//     // 更新搜索参数配置
-//     if (searchParamsConfig?.configData) {
-//       taskConfig.searchParams = {
-//         ...taskConfig.searchParams,
-//         ...searchParamsConfig.configData
-//       };
-//     }
-
-//     console.log('[任务管理器] 已从数据库加载配置');
-//     console.log('[任务管理器] 启用的关键词:', taskConfig.keywords);
-//     console.log('[任务管理器] 启用的地区数量:', getAllGeoIds().length);
-//     console.log('[任务管理器] 搜索参数配置:', taskConfig.searchParams);
-
-//     return true;
-//   } catch (error) {
-//     console.error('[任务管理器] 加载配置失败:', error);
-//     return false;
-//   }
-// };
 
 // 获取所有geoId
 const getAllGeoIds = () => {
@@ -1484,6 +1415,13 @@ async function executeTask() {
               consecutiveEmptyPages = 0;
               
               console.log(`[任务管理器] 在第 ${currentPage+1} 页找到 ${jobCards.length} 个职位卡片`);
+              // --- 判断是否已到最后一页 ---------------------------------
+              // 如果当前页返回的职位数量不足 10，则说明已经没有更多职位，
+              // 无论数量是 1‒9 个都不再继续请求下一页。
+              if (jobCards.length > 0 && jobCards.length < 10) {
+                console.log(`[任务管理器] 当前页职位不足一页 (${jobCards.length} < 10)，已到列表末尾，停止继续分页`);
+                hasMorePages = false;
+              }
               
               // 修改：直接从当前页面提取职位信息，而不是保存元素引用
               // 这样避免导航到其他页面后元素引用失效的问题
