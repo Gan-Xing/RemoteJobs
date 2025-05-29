@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import KeywordConfigManager from './KeywordConfigManager';
-import CountryConfigManager from './CountryConfigManager';
-import SearchParamsConfigManager from './SearchParamsConfigManager';
+import KeywordConfigManager from '../shared/KeywordConfigManager';
+import CountryConfigManager from '../shared/CountryConfigManager';
+import SearchParamsConfigManager from '../shared/SearchParamsConfigManager';
 
 const SearchConfigModal = ({ 
   isOpen, 

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -17,7 +16,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { regions } from '../utils/regions';
+import { regions } from '@/utils/regions';
 
 // 单个国家项组件
 const SortableCountryItem = ({ countryItem, onToggle, onPin }) => {

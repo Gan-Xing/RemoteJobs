@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import Head from 'next/head';
-import VirtualJobListWithControls from '../components/VirtualJobListWithControls';
+import VirtualJobListWithControls from '@/components/analysis/VirtualJobListWithControls';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import JobDetail from '../components/JobDetail';
+import JobDetail from '@/components/shared/JobDetail';
 
 // 创建 QueryClient 实例
 const queryClient = new QueryClient();

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import Head from "next/head";
-import TaskStatus from "../components/TaskStatus";
-import TaskControls from "../components/TaskControls";
-import SearchConfigModal from "../components/SearchConfigModal";
-import LocalStorageMonitor from "../components/LocalStorageMonitor";
-import { useSSE } from "../components/SSEProvider";
+import TaskStatus from "@/components/task/TaskStatus";
+import TaskControls from "@/components/task/TaskControls";
+import SearchConfigModal from "@/components/task/SearchConfigModal";
+import LocalStorageMonitor from "@/components/task/LocalStorageMonitor";
+import { useSSE } from "@/components/shared/SSEProvider";
 
 export default function TaskControl() {
   const [status, setStatus] = useState({ status: "loading", running: false });

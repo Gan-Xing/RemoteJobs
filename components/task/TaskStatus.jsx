@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { formatTime } from '../utils/formatters';
-import { useSSE } from './SSEProvider';
+import { formatTime } from '../../utils/formatters';
+import { useSSE } from '../shared/SSEProvider';
 
 const TaskStatus = ({ status, onStatusChange }) => {
   const [elapsedTime, setElapsedTime] = useState(0);

@@ -1,5 +1,5 @@
-import '../styles/globals.css';
-import { SSEProvider } from '../components/SSEProvider';
+import '@/styles/globals.css';
+import { SSEProvider } from '@/components/shared/SSEProvider';
 
 function MyApp({ Component, pageProps }) {
   return (

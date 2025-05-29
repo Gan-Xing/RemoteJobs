@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import JobFilters from './JobFilters';
-import VirtualJobList from './VirtualJobList';
+import JobFilters from '@/components/shared/JobFilters';
+import VirtualJobList from '@/components/analysis/VirtualJobList';
 
 export default function VirtualJobListWithControls({ onJobClick }) {
   const queryClient = useQueryClient();

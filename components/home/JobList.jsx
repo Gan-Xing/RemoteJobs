@@ -1,6 +1,3 @@
-import { useState } from 'react';
-import JobDetail from './JobDetail';
-
 export default function JobList({ jobs, onJobClick }) {
   if (!jobs || jobs.length === 0) {
     return (

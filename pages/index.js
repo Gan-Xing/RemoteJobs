@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import JobList from '../components/JobList';
-import JobFilter from '../components/JobFilter';
-import Settings from '../components/Settings';
-import AdvancedFilters from '../components/AdvancedFilters';
-import JobDetail from '../components/JobDetail';
-import { regions } from '../utils/regions';
+import JobList from '@/components/home/JobList';
+import SimpleJobFilter from '@/components/home/SimpleJobFilter';
+import Settings from '@/components/home/Settings';
+import AdvancedFilters from '@/components/home/AdvancedFilters';
+import JobDetail from '@/components/shared/JobDetail';
+import { regions } from '@/utils/regions';
 
 export default function Home() {
   const [keywords, setKeywords] = useState("");
@@ -430,7 +430,7 @@ export default function Home() {
         
         {showFilters && jobs.length > 0 && (
           <div className="mb-8 animate-fadeIn">
-            <JobFilter 
+            <SimpleJobFilter 
               sortBy={sortBy} 
               onSortChange={handleSort} 
               totalJobs={filteredJobs.length}
