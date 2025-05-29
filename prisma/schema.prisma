@@ -20,6 +20,7 @@ model Job {
   refId                 String?  // LinkedIn 的引用ID，用于构造详情URL
   title                 String   // 职位标题
   company               String   // 公司名称
+  companyUrl            String?  // 公司主页 URL，用于归一化不同名称但同一实体的公司
   location              String?  // 地点
   description           String?  @db.Text  // 职位描述 (job_description)
   url                   String   @unique  // 职位链接 (link)
