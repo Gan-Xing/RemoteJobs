@@ -72,7 +72,7 @@ export default async function handler(req, res) {
   }
   
   // 每个IP最多允许3个连接
-  if (ipConnectionCount >= 3) {
+  if (ipConnectionCount >= 1) {
     console.log(`[API:sse] 拒绝连接请求，IP ${clientIp} 已有 ${ipConnectionCount} 个连接`);
     return res.status(429).json({
       error: '您的连接请求过于频繁，请稍后再试',

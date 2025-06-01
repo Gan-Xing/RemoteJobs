@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import TaskStatus from "@/components/task/TaskStatus";
 import TaskControls from "@/components/task/TaskControls";
@@ -18,11 +18,43 @@ export default function TaskControl() {
   });
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const { connected, taskStatus, error } = useSSE();
+  const timerRef = useRef(null);
 
   // 处理任务状态更新
   const handleStatusChange = (newStatus) => {
     setStatus(newStatus);
   };
+
+  // 添加运行时间更新逻辑
+  useEffect(() => {
+    if (status.running && status.startedAt) {
+      // 清除可能存在的旧定时器
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      
+      // 设置新的定时器，每秒更新运行时间
+      timerRef.current = setInterval(() => {
+        setStatus(prev => ({
+          ...prev,
+          elapsedSec: Math.floor((Date.now() - new Date(prev.startedAt).getTime()) / 1000)
+        }));
+      }, 1000);
+    } else {
+      // 如果任务停止，清除定时器
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    // 组件卸载时清理定时器
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [status.running, status.startedAt]);
 
   // 初始加载时获取配置
   useEffect(() => {
