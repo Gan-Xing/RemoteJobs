@@ -80,3 +80,276 @@ model ExchangeRate {
 
   @@index([date])
 }
+
+model JobClean {
+  id                  String   @id @default(uuid())          // 唯一主键
+  jobId               String   @unique                      // 平台唯一岗位ID
+  refId               String?                               // 平台跟踪Ref
+  jobUrl              String                                // 岗位详情页url
+
+  title               String                                // 原始岗位title
+  titleClass          String?                               // 标准化类别
+  companyName         String?                               // 公司名（标准化/原始）
+  companyId           String?                               // 归一id, 由companyUrl生成
+  companyUrl          String?                               // 公司主页url
+
+  // 地理信息
+  country             String?  @db.Char(2)                  // ISO2国家码
+  region              String?                               // 省/州
+  city                String?                               // 城市
+  lat                 Float?                                // 纬度
+  lng                 Float?                                // 经度
+
+  // 薪资结构化
+  salaryMin           Int?                                  // 最低薪资
+  salaryMax           Int?                                  // 最高薪资
+  salaryCurrency      SalaryCurrency?                       // 薪资货币（enum）
+  salaryPeriod        SalaryPeriod?                         // 薪资周期（enum）
+  salaryUsdYearMin    Float?                                // 美元年薪(最低)
+  salaryUsdYearMax    Float?                                // 美元年薪(最高)
+
+  postedAt            DateTime?                             // 发布时间
+  applicantsCount     Int?                                  // 申请人数
+  applicantsIsCapped  Boolean  @default(false)              // 申请人数上限
+
+  platform            String   @default("linkedin")         // 来源平台          // 是否远程
+  workplaceType       WorkplaceType @default(ON_SITE)       // 办公类型（enum）
+  employmentType      EmploymentType                        // 雇佣类型（enum）
+  seniority           Seniority?                            // 职位级别（enum）
+
+  experienceCategory  ExperienceCategory?                   // 经验年限类别（NLP抽取/enum）
+  jobFunction         String?                               // 职能
+  industries          String?                               // 行业
+  educationRequired   EducationLevel?                       // 学历要求（enum）
+  mandatoryTech       String[]                              // 必须技术
+  niceToHaveTech      String[]                              // 加分技术
+  softSkills          String[]                              // 软技能
+  certificatesRequired String[]                             // 证书要求
+  benefits            String[]                              // 福利
+
+  languages           String[]                              // 必须语言
+  timezoneRestriction Int[]                                 // 时区限制（如[-5, 3]）
+
+  description         String?   @db.Text                    // 原始JD
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ----------- 枚举建议 -----------
+
+enum SalaryPeriod {
+  YEAR
+  MONTH
+  WEEK
+  DAY
+  HOUR
+}
+
+enum WorkplaceType {
+  REMOTE
+  ON_SITE
+  HYBRID
+}
+
+enum EmploymentType {
+  FULL_TIME
+  CONTRACT
+  PART_TIME
+  TEMPORARY
+  INTERNSHIP
+  VOLUNTEER
+  OTHER
+}
+
+enum Seniority {
+  ENTRY
+  ASSOCIATE
+  MID_SENIOR
+  DIRECTOR
+  EXECUTIVE
+  INTERNSHIP
+  NOT_APPLICABLE
+}
+
+enum ExperienceCategory {
+  Y0_1
+  Y1_3
+  Y3_5
+  Y5P
+}
+
+enum EducationLevel {
+  NONE
+  HIGH_SCHOOL
+  BACHELOR
+  MASTER
+  PHD
+}
+
+
+enum SalaryCurrency {
+  USD
+  AED
+  AFN
+  ALL
+  AMD
+  ANG
+  AOA
+  ARS
+  AUD
+  AWG
+  AZN
+  BAM
+  BBD
+  BDT
+  BGN
+  BHD
+  BIF
+  BMD
+  BND
+  BOB
+  BRL
+  BSD
+  BTN
+  BWP
+  BYN
+  BZD
+  CAD
+  CDF
+  CHF
+  CLP
+  CNY
+  COP
+  CRC
+  CUP
+  CVE
+  CZK
+  DJF
+  DKK
+  DOP
+  DZD
+  EGP
+  ERN
+  ETB
+  EUR
+  FJD
+  FKP
+  FOK
+  GBP
+  GEL
+  GGP
+  GHS
+  GIP
+  GMD
+  GNF
+  GTQ
+  GYD
+  HKD
+  HNL
+  HRK
+  HTG
+  HUF
+  IDR
+  ILS
+  IMP
+  INR
+  IQD
+  IRR
+  ISK
+  JEP
+  JMD
+  JOD
+  JPY
+  KES
+  KGS
+  KHR
+  KID
+  KMF
+  KRW
+  KWD
+  KYD
+  KZT
+  LAK
+  LBP
+  LKR
+  LRD
+  LSL
+  LYD
+  MAD
+  MDL
+  MGA
+  MKD
+  MMK
+  MNT
+  MOP
+  MRU
+  MUR
+  MVR
+  MWK
+  MXN
+  MYR
+  MZN
+  NAD
+  NGN
+  NIO
+  NOK
+  NPR
+  NZD
+  OMR
+  PAB
+  PEN
+  PGK
+  PHP
+  PKR
+  PLN
+  PYG
+  QAR
+  RON
+  RSD
+  RUB
+  RWF
+  SAR
+  SBD
+  SCR
+  SDG
+  SEK
+  SGD
+  SHP
+  SLE
+  SLL
+  SOS
+  SRD
+  SSP
+  STN
+  SYP
+  SZL
+  THB
+  TJS
+  TMT
+  TND
+  TOP
+  TRY
+  TTD
+  TVD
+  TWD
+  TZS
+  UAH
+  UGX
+  UYU
+  UZS
+  VES
+  VND
+  VUV
+  WST
+  XAF
+  XCD
+  XCG
+  XDR
+  XOF
+  XPF
+  YER
+  ZAR
+  ZMW
+  ZWL
+}
