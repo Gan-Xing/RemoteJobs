@@ -62,7 +62,7 @@ const isJobComplete = (job) => (
   job.link &&                                                        // url 存在
   job.posted_text && job.posted_text !== '未知日期' &&
   job.applicants_count && job.applicants_count !== '未找到' &&
-  job.seniority && job.employment_type && job.job_function && job.industries
+  job.seniority && job.employment_type && job.industries
 );
 
 /* ---------- 从 job_urls.json 移除已完成职位 ---------- */
@@ -192,6 +192,7 @@ const saveJobs = async (jobs) => {
       // 检测完整数据并更新 job_urls.json
       try {
         const completedIds = jobs.filter(isJobComplete).map(j => j.job_id || j.jobId);
+        appendDoneJobIds(completedIds);
         removeCompletedFromJobUrls(completedIds);
       } catch (e) {
         console.error('[数据库] 更新 job_urls.json 时出错:', e.message);
@@ -239,250 +240,6 @@ const appendFailed = arr => {
   fs.writeFileSync(failedPath, JSON.stringify([...prev, ...arr], null, 2));
   console.log(`[DetailFetcher] 💾 已追加 ${arr.length} 条到 ${failedPath}`);
 };
-
-// ------------ 解析函数（与 executeTask 相同选择器） -------------
-// async function scrapeDetail(page, meta) {
-//   await page.goto(meta.detailUrl, { waitUntil: 'domcontentloaded', timeout: scrapingConfig.navigationTimeout });
-//   await randWait(scrapingConfig.pageLoadDelay.min, scrapingConfig.pageLoadDelay.max);
-
-//   // 公司主页链接
-//   let companyUrl = null;
-//   try {
-//     companyUrl = await page.$eval('a.topcard__org-name-link', el => el.href);
-//   } catch (e) {}
-
-//   // 位置
-//   let location = null;
-//   try {
-//     location = await page.$eval('span.topcard__flavor.topcard__flavor--bullet', el => el.textContent.trim());
-//   } catch (e) {}
-
-//   // 优先使用详情页提供的跳转链接
-//   let primaryLink = null;
-//   try {
-//     primaryLink = await page.$eval('a.topcard__link', el => el.href);
-//   } catch (e) {}
-//   const finalLink = primaryLink || `https://www.linkedin.com/jobs/view/${meta.jobId}`;
-
-//   // 发布时间文本与属性
-//   let postedText = null;
-//   let postedDateAttr = null;
-//   try {
-//     postedText = await page.$eval('span.posted-time-ago__text', el => el.textContent.trim());
-//   } catch (e) {}
-//   try {
-//     postedDateAttr = await page.$eval('time.posted-time-ago__text', el => el.getAttribute('datetime'));
-//   } catch (e) {}
-
-//   // 提取职位描述
-//   let description = "未找到描述";
-//   const descriptionSelectors = [
-//     ".show-more-less-html__markup",
-//     ".description__text",
-//     ".jobs-description-content__text",
-//     ".jobs-description__content",
-//     ".jobs-box__html-content",
-//     ".job-description"
-//   ];
-//   for (const selector of descriptionSelectors) {
-//     try {
-//       const descEl = await page.$(selector);
-//       if (descEl) {
-//         description = await descEl.evaluate(el => el.textContent.trim());
-//         break;
-//       }
-//     } catch (e) {}
-//   }
-//   console.log(`[DetailFetcher] 描述状态: ${description === "未找到描述" ? "未找到描述" : "已找到"}`);
-
-//   // 提取申请人数
-//   let applicantsCount = "未找到";
-//   const applicantSelectors = [
-//     ".num-applicants__caption",
-//     ".jobs-unified-top-card__applicant-count",
-//     ".jobs-company-hiring__applicant-count",
-//     ".job-analytics__applicant-count",
-//     ".applicant-count"
-//   ];
-  
-//   for (const selector of applicantSelectors) {
-//     try {
-//       const applicantEl = await page.$(selector);
-//       if (applicantEl) {
-//         applicantsCount = await applicantEl.evaluate(el =>
-//           el.textContent.trim().replace(/[^\d,.]+/g, '')
-//         );
-//         break;
-//       }
-//     } catch (e) {}
-//   }
-
-//   // 提取薪资信息
-//   let salary = "未找到";
-//   const salarySelectors = [
-//     ".compensation__salary",
-//     ".jobs-unified-top-card__salary-details",
-//     ".job-details-jobs-unified-top-card__job-insight",
-//     ".salary-range",
-//     ".job-salary"
-//   ];
-//   for (const selector of salarySelectors) {
-//     try {
-//       const salaryEl = await page.$(selector);
-//       if (salaryEl) {
-//         const salaryText = await salaryEl.evaluate(el => {
-//           const fullText = el.textContent.trim();
-//           const salaryMatch = fullText.match(/[\$¥€£₹]\s*[\d,.]+([\s\-]+[\$¥€£₹]?[\d,.]+)?(\s*\/\s*[a-zA-Z]+)?/);
-//           return salaryMatch ? salaryMatch[0].trim() : fullText;
-//         });
-//         if (
-//           salaryText &&
-//           (salaryText.includes("$") || salaryText.includes("¥") ||
-//            salaryText.includes("€") || salaryText.includes("£") ||
-//            salaryText.includes("₹") || salaryText.includes("元") ||
-//            salaryText.includes("万") || /\d+[Kk]/.test(salaryText) ||
-//            /\d+.*\d+/.test(salaryText))
-//         ) {
-//           salary = salaryText;
-//           break;
-//         }
-//       }
-//     } catch (e) {}
-//   }
-
-//   // 计算薪资数字
-//   let salaryNumeric = null;
-//   try {
-//     if (salary && salary !== '未找到') {
-//       salaryNumeric = await convertSalaryToUSD(salary);
-//       if (typeof salaryNumeric !== 'number' || isNaN(salaryNumeric)) salaryNumeric = null;
-//     }
-//   } catch (e) { salaryNumeric = null; }
-
-//   // 提取职位标准信息
-//   const jobCriteria = {};
-//   let seniority = null;
-//   let employmentType = null;
-//   let jobFunction = null;
-//   let industries = null;
-//   const criteriaSelectors = [
-//     ".description__job-criteria-item",
-//     ".jobs-description-details__list-item",
-//     ".jobs-unified-top-card__job-insight",
-//     ".job-criteria-item"
-//   ];
-//   for (const selector of criteriaSelectors) {
-//     try {
-//       const items = await page.$$(selector);
-//       if (items.length > 0) {
-//         for (const item of items) {
-//           const headerSelectors = [".description__job-criteria-subheader", "h3", ".job-criteria-subheader", ".job-insight-label"];
-//           const valueSelectors = [".description__job-criteria-text", "span:not(h3)", ".job-criteria-text", ".job-insight-value"];
-//           let headerText = null;
-//           let valueText = null;
-//           for (const hs of headerSelectors) {
-//             try {
-//               const hEl = await item.$(hs);
-//               if (hEl) {
-//                 headerText = await hEl.evaluate(el => el.textContent.trim());
-//                 break;
-//               }
-//             } catch (e) {}
-//           }
-//           for (const vs of valueSelectors) {
-//             try {
-//               const vEl = await item.$(vs);
-//               if (vEl) {
-//                 valueText = await vEl.evaluate(el => el.textContent.trim());
-//                 break;
-//               }
-//             } catch (e) {}
-//           }
-//           if (headerText && valueText) {
-//             jobCriteria[headerText.trim()] = valueText.trim();
-//             const low = headerText.toLowerCase();
-//             if (low.includes('seniority')) seniority = valueText.trim();
-//             else if (low.includes('employment') || low.includes('雇佣') || low.includes('类型')) employmentType = valueText.trim();
-//             else if (low.includes('function')) jobFunction = valueText.trim();
-//             else if (low.includes('industries') || low.includes('行业')) industries = valueText.trim();
-//           }
-//         }
-//       }
-//     } catch (e) {}
-//   }
-
-//   // 获取是否远程
-//   let isRemote = false;
-//   try {
-//     const remoteSelectors = [
-//       ".jobs-unified-top-card__workplace-type",
-//       ".jobs-unified-top-card__subtitle-primary .jobs-unified-top-card__bullet",
-//       ".job-details-jobs-unified-top-card__workplace-type",
-//       ".workplace-type",
-//       ".job-type-info"
-//     ];
-//     let locationText = "";
-//     for (const rs of remoteSelectors) {
-//       try {
-//         const txt = await page.$eval(rs, el => el.textContent.toLowerCase());
-//         if (txt) locationText += " " + txt;
-//       } catch (e) {}
-//     }
-//     if (
-//       locationText.includes('remote') || locationText.includes('在家工作') ||
-//       locationText.includes('远程') || locationText.includes('remoto') ||
-//       locationText.includes('télétravail') || locationText.includes('homeoffice')
-//     ) {
-//       isRemote = true;
-//     } else {
-//       const body = await page.evaluate(() => document.body.textContent.toLowerCase());
-//       const remoteWords = [
-//         'fully remote','100% remote','work from home','remote position','trabajo remoto','远程工作','working remotely','home office','远程办公'
-//       ];
-//       if (remoteWords.some(w => body.includes(w))) isRemote = true;
-//     }
-//   } catch (e) {}
-
-  
-//   /* ---------- Fallback: use meta data when scraping misses ---------- */
-//   if (!location && meta.location) location = meta.location;
-//   if (salary === '未找到' && meta.salary && meta.salary !== '未找到') salary = meta.salary;
-//   if ((applicantsCount === '未找到' || !applicantsCount) && meta.applicantsCount) {
-//     applicantsCount = meta.applicantsCount;
-//   }
-//   if (!postedText && meta.postedText) postedText = meta.postedText;
-//   if (!postedDateAttr && meta.postedAt) postedDateAttr = meta.postedAt;
-//   if (!seniority && meta.seniority) seniority = meta.seniority;
-//   if (!employmentType && meta.employmentType) employmentType = meta.employmentType;
-//   if (!jobFunction && meta.jobFunction) jobFunction = meta.jobFunction;
-//   if (!industries && meta.industries) industries = meta.industries;
-//   if (salaryNumeric == null && typeof meta.salaryNumeric === 'number') salaryNumeric = meta.salaryNumeric;
-
-//   // 合并返回
-//   return {
-//     job_id: meta.jobId,
-//     ref_id: meta.refId || '',
-//     title: meta.title,
-//     company: meta.company,
-//     companyUrl: companyUrl,
-//     location: location,
-//     link: finalLink,
-//     detail_url: meta.detailUrl,
-//     job_description: description,
-//     job_description_fallback: description,
-//     applicants_count: applicantsCount,
-//     salary_range: salary,
-//     salary_numeric: salaryNumeric,
-//     posted_date_attr: postedDateAttr,
-//     posted_text: postedText,
-//     is_remote: isRemote,
-//     job_criteria: jobCriteria,
-//     seniority,
-//     employment_type: employmentType,
-//     job_function: jobFunction,
-//     industries
-//   };
-// }
 
 /**
  * 抓取职位详情（重构版）
@@ -680,6 +437,23 @@ async function scrapeDetail(page, meta, retries = 2) {
   }
 }
 
+function appendDoneJobIds(ids) {
+  if (!ids.length) return;
+  const donePath = path.join(projectRoot, 'data', 'done_job_ids.json');
+  let prev = [];
+  if (fs.existsSync(donePath)) {
+    try {
+      prev = JSON.parse(fs.readFileSync(donePath, 'utf8'));
+    } catch (e) {
+      prev = [];
+    }
+  }
+  // 去重合并
+  const merged = Array.from(new Set([...prev, ...ids]));
+  fs.writeFileSync(donePath, JSON.stringify(merged, null, 2));
+  console.log(`[DetailFetcher] 📥 已追加写入 ${ids.length} 个 job_id 到 ${donePath}，共 ${merged.length} 条`);
+}
+
 // ------------------ 主流程 -------------------------
 (async () => {
   const projectRoot = getProjectRoot();
@@ -691,7 +465,7 @@ async function scrapeDetail(page, meta, retries = 2) {
   if (!fs.existsSync(jsonPath)) {
     console.error(`[DetailFetcher] ❌ 文件不存在: ${jsonPath}`); process.exit(1);
   }
-  const jobs = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+  const jobs = JSON.parse(fs.readFileSync(jsonPath, 'utf8')).reverse();
   console.log(`[DetailFetcher] 将处理 ${jobs.length} 条职位详情`);
 
   const browser = await chromium.launch({ headless:true, args:['--no-sandbox','--disable-setuid-sandbox'] });
@@ -718,6 +492,33 @@ async function scrapeDetail(page, meta, retries = 2) {
     //   batch.length=0;
     // }
     if (batch.length >= BATCH_SIZE) {
+      // 输出本批次所有不完整 job 及具体不合格字段
+      batch.forEach(job => {
+        if (!isJobComplete(job)) {
+          // 检查每个字段是否缺失，并输出详细原因
+          const incompleteFields = [];
+          if (!job.job_id) incompleteFields.push('job_id');
+          if (!job.title || job.title === '未知职位') incompleteFields.push('title');
+          if (!job.company || job.company === '未知公司') incompleteFields.push('company');
+          if (!job.location || job.location === '未知地点') incompleteFields.push('location');
+          if (!job.job_description || job.job_description === '未找到描述') incompleteFields.push('job_description');
+          if (!job.link) incompleteFields.push('link');
+          if (!job.posted_text || job.posted_text === '未知日期') incompleteFields.push('posted_text');
+          if (!job.applicants_count || job.applicants_count === '未找到') incompleteFields.push('applicants_count');
+          if (!job.seniority) incompleteFields.push('seniority');
+          if (!job.employment_type) incompleteFields.push('employment_type');
+          if (!job.industries) incompleteFields.push('industries');
+          console.log('不完整的 job:', {
+            id: job.job_id || job.jobId,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            incompleteFields,
+            detailUrl: job.detail_url || job.detailUrl // 兼容旧/新字段
+          });
+        }
+      });
+    
       const completeJobs = batch.filter(isJobComplete);
       if (completeJobs.length > 0) {
         try {
@@ -733,10 +534,32 @@ async function scrapeDetail(page, meta, retries = 2) {
     const fac = Math.max(0.5,1-jobs.length/scrapingConfig.jobIntervalDelay.factor);
     await randWait(base*fac, base*fac+50);
   }
-  // if(batch.length){
-  //   try{ await saveJobs(batch);}catch(e){appendFailed(batch);}
-  // }
   if (batch.length) {
+    batch.forEach(job => {
+      if (!isJobComplete(job)) {
+        // 检查每个字段是否缺失，并输出详细原因
+        const incompleteFields = [];
+        if (!job.job_id) incompleteFields.push('job_id');
+        if (!job.title || job.title === '未知职位') incompleteFields.push('title');
+        if (!job.company || job.company === '未知公司') incompleteFields.push('company');
+        if (!job.location || job.location === '未知地点') incompleteFields.push('location');
+        if (!job.job_description || job.job_description === '未找到描述') incompleteFields.push('job_description');
+        if (!job.link) incompleteFields.push('link');
+        if (!job.posted_text || job.posted_text === '未知日期') incompleteFields.push('posted_text');
+        if (!job.applicants_count || job.applicants_count === '未找到') incompleteFields.push('applicants_count');
+        if (!job.seniority) incompleteFields.push('seniority');
+        if (!job.employment_type) incompleteFields.push('employment_type');
+        if (!job.industries) incompleteFields.push('industries');
+        console.log('不完整的 job:', {
+          id: job.job_id || job.jobId,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          incompleteFields,
+          detailUrl: job.detail_url || job.detailUrl // 兼容旧/新字段
+        });
+      }
+    });
     const completeJobs = batch.filter(isJobComplete);
     if (completeJobs.length > 0) {
       try {
