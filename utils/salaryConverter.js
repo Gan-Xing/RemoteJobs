@@ -170,94 +170,117 @@ async function getExchangeRates() {
 // 解析薪资字符串
 // function parseSalaryString(salaryString) {
 //   console.log('[salaryConverter] ➡ parseSalaryString()', salaryString);
-//   // 移除多余的空格
+//   // 清理
 //   salaryString = salaryString.trim();
 
-//   // 检查是否包含范围
-//   const rangeMatch = salaryString.match(/([¥€£$₹CHF\sPLN\sSEK\s])\s*([\d,.]+)(?:\s*-\s*[¥€£$₹CHF\sPLN\sSEK\s]?\s*([\d,.]+))?(?:\s*(?:\/|\s)\s*([a-zA-Z]+))?/);
-//   console.log(`[parseSalaryString] Range match: ${rangeMatch}`);
+//   // 1. 先尝试区间（抓两组：货币+数值+单位）
+//   // 支持 €15.00/hr - €30.00/hr、€2500 - 4000/mo、RMB 10K-20K/月、5000-10000
+//   const rangePattern = new RegExp(
+//     [
+//       '([¥€£$₹CHFPLNSEK]{0,3})\\s*([\\d,\\.]+)\\s*(?:\\/|/|每)?\\s*([a-zA-Z\\u4e00-\\u9fa5]*)?', // 左侧
+//       '\\s*[-–—~－到至]+\\s*', // 中间连接符（中英文、全角等）
+//       '([¥€£$₹CHFPLNSEK]{0,3})\\s*([\\d,\\.]+)\\s*(?:\\/|/|每)?\\s*([a-zA-Z\\u4e00-\\u9fa5]*)?' // 右侧
+//     ].join(''),
+//     'i'
+//   );
+//   let match = salaryString.match(rangePattern);
+//   if (match) {
+//     // 左侧
+//     let currency = match[1] || match[4] || '';
+//     let amount1 = parseFloat((match[2] || '').replace(/,/g, ''));
+//     let amount2 = parseFloat((match[5] || '').replace(/,/g, ''));
+//     let period = (match[3] || match[6] || '').toLowerCase();
 
-//   if (!rangeMatch) {
-//     return null;
+//     // 中文“月”“年”等替换
+//     if (/月/.test(period)) period = 'mo';
+//     if (/年|ann|yr|year/i.test(period)) period = 'yr';
+//     if (/天|日|dai|day/i.test(period)) period = 'daily';
+//     if (/时|h|hour/i.test(period)) period = 'hr';
+
+//     return {
+//       currency: currency.trim(),
+//       amount1,
+//       amount2,
+//       period
+//     };
 //   }
 
-//   const [, currencySymbol, amountString1, amountString2, periodUnit] = rangeMatch;
-//   console.log(`[parseSalaryString] Currency symbol: ${currencySymbol}, Amount string 1: ${amountString1}, Amount string 2: ${amountString2}, Period unit: ${periodUnit}`);
+//   // 2. 单值形式
+//   const singlePattern = /([¥€£$₹CHFPLNSEK]{0,3})\s*([\d,.]+)\s*(?:\/|每|\/)?\s*([a-zA-Z\u4e00-\u9fa5]*)?/i;
+//   match = salaryString.match(singlePattern);
+//   if (match) {
+//     let currency = match[1] || '';
+//     let amount1 = parseFloat((match[2] || '').replace(/,/g, ''));
+//     let period = (match[3] || '').toLowerCase();
 
-//   // 解析金额
-//   const amount1 = parseFloat(amountString1.replace(/,/g, ''));
-//   const amount2 = amountString2 ? parseFloat(amountString2.replace(/,/g, '')) : null;
+//     // 中文单位映射
+//     if (/月/.test(period)) period = 'mo';
+//     if (/年|ann|yr|year/i.test(period)) period = 'yr';
+//     if (/天|日|dai|day/i.test(period)) period = 'daily';
+//     if (/时|h|hour/i.test(period)) period = 'hr';
 
-//   // 标准化货币符号
-//   const normalizedCurrency = currencySymbol.trim();
-//   console.log(`[parseSalaryString] Normalized currency: ${normalizedCurrency}`);
+//     return {
+//       currency: currency.trim(),
+//       amount1,
+//       amount2: null,
+//       period
+//     };
+//   }
 
-//   // 标准化周期单位
-//   const normalizedPeriod = periodUnit ? periodUnit.toLowerCase() : null;
-//   console.log(`[parseSalaryString] Normalized period: ${normalizedPeriod}`);
-
-//   return {
-//     currency: normalizedCurrency,
-//     amount1,
-//     amount2,
-//     period: normalizedPeriod
-//   };
+//   return null;
 // }
 function parseSalaryString(salaryString) {
-  console.log('[salaryConverter] ➡ parseSalaryString()', salaryString);
-  // 清理
+  if (!salaryString || typeof salaryString !== 'string') return null;
   salaryString = salaryString.trim();
 
-  // 1. 先尝试区间（抓两组：货币+数值+单位）
-  // 支持 €15.00/hr - €30.00/hr、€2500 - 4000/mo、RMB 10K-20K/月、5000-10000
+  // 1. 区间
   const rangePattern = new RegExp(
     [
-      '([¥€£$₹CHFPLNSEK]{0,3})\\s*([\\d,\\.]+)\\s*(?:\\/|/|每)?\\s*([a-zA-Z\\u4e00-\\u9fa5]*)?', // 左侧
-      '\\s*[-–—~－到至]+\\s*', // 中间连接符（中英文、全角等）
-      '([¥€£$₹CHFPLNSEK]{0,3})\\s*([\\d,\\.]+)\\s*(?:\\/|/|每)?\\s*([a-zA-Z\\u4e00-\\u9fa5]*)?' // 右侧
+      '([¥€£$₹CHFPLNSEK]{0,3})\\s*([\\d,\\.Kk]+)\\s*(?:\\/|/|每)?\\s*([a-zA-Z\\u4e00-\\u9fa5]*)?', // 左
+      '\\s*[-–—~－到至]+\\s*', // 连接符
+      '([¥€£$₹CHFPLNSEK]{0,3})\\s*([\\d,\\.Kk]+)\\s*(?:\\/|/|每)?\\s*([a-zA-Z\\u4e00-\\u9fa5]*)?' // 右
     ].join(''),
     'i'
   );
   let match = salaryString.match(rangePattern);
   if (match) {
-    // 左侧
     let currency = match[1] || match[4] || '';
-    let amount1 = parseFloat((match[2] || '').replace(/,/g, ''));
-    let amount2 = parseFloat((match[5] || '').replace(/,/g, ''));
+    let amount1 = parseFloat((match[2] || '').replace(/,/g, '').replace(/k/i, '000'));
+    let amount2 = parseFloat((match[5] || '').replace(/,/g, '').replace(/k/i, '000'));
     let period = (match[3] || match[6] || '').toLowerCase();
 
-    // 中文“月”“年”等替换
     if (/月/.test(period)) period = 'mo';
     if (/年|ann|yr|year/i.test(period)) period = 'yr';
     if (/天|日|dai|day/i.test(period)) period = 'daily';
     if (/时|h|hour/i.test(period)) period = 'hr';
+    if (/周|星期|week/i.test(period)) period = 'week';
 
     return {
       currency: currency.trim(),
       amount1,
-      amount2,
+      amount2: amount2 == null ? amount1 : amount2,
       period
     };
   }
 
-  // 2. 单值形式
-  const singlePattern = /([¥€£$₹CHFPLNSEK]{0,3})\s*([\d,.]+)\s*(?:\/|每|\/)?\s*([a-zA-Z\u4e00-\u9fa5]*)?/i;
+  // 2. 单值
+  const singlePattern = /([¥€£$₹CHFPLNSEK]{0,3})\s*([\d,.Kk]+)\s*(?:\/|每|\/)?\s*([a-zA-Z\u4e00-\u9fa5]*)?/i;
   match = salaryString.match(singlePattern);
   if (match) {
     let currency = match[1] || '';
-    let amount1 = parseFloat((match[2] || '').replace(/,/g, ''));
+    let amount1 = parseFloat((match[2] || '').replace(/,/g, '').replace(/k/i, '000'));
     let period = (match[3] || '').toLowerCase();
 
-    // 中文单位映射
     if (/月/.test(period)) period = 'mo';
     if (/年|ann|yr|year/i.test(period)) period = 'yr';
     if (/天|日|dai|day/i.test(period)) period = 'daily';
     if (/时|h|hour/i.test(period)) period = 'hr';
+    if (/周|星期|week/i.test(period)) period = 'week';
 
     return {
       currency: currency.trim(),
       amount1,
-      amount2: null,
+      amount2: amount1,
       period
     };
   }
@@ -338,6 +361,9 @@ function convertToAnnual(amount, period) {
       return amount * 12; // 12个月
     case 'daily':
       return amount * 5 * 52; // 每周5天，52周
+    case 'week':
+    case 'weekly':
+      return amount * 52; // 每年52周
     case 'yr':
     case 'year':
     case 'annually':
@@ -430,5 +456,5 @@ async function convertSalaryToUSD(salaryString) {
 }
 
 module.exports = {
-  convertSalaryToUSD
+  convertSalaryToUSD, parseSalaryString, convertToAnnual, convertToUSD
 };
